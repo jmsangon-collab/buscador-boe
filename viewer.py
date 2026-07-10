@@ -82,6 +82,7 @@ TEMPLATE = r"""<!DOCTYPE html>
     <button type="button" data-v="" class="on">Todas</button><button type="button" data-v="urbano">Urbano</button><button type="button" data-v="rural">Rural</button>
   </span></label>
   <label>Provincia<select id="prov"><option value="">todas</option></select></label>
+  <label>Localidad<input id="loc" list="locs" placeholder="todas"><datalist id="locs"></datalist></label>
   <label>Estado<select id="est"><option value="">todos</option></select></label>
   <label>% mercado max<input id="pmerc" type="number" step="5" placeholder="ej: 70"></label>
   <label class="sw"><input id="solomar" type="checkbox"><span class="track"></span> &lt;500 m del mar</label>
@@ -149,6 +150,7 @@ function llenar(sel,vals){vals.forEach(v=>{const o=document.createElement('optio
 llenar(document.getElementById('sub'), unicos('subtipo'));
 llenar(document.getElementById('prov'), unicos('provincia'));
 llenar(document.getElementById('est'), unicos('estado'));
+llenar(document.getElementById('locs'), unicos('localidad'));
 
 function aplica(){
   const q=document.getElementById('q').value.toLowerCase();
@@ -156,6 +158,7 @@ function aplica(){
   const sub=document.getElementById('sub').value;
   const clase=claseVal;
   const prov=document.getElementById('prov').value;
+  const loc=document.getElementById('loc').value.trim().toLowerCase();
   const est=document.getElementById('est').value;
   const solomar=document.getElementById('solomar').checked;
   const pmerc=parseFloat(document.getElementById('pmerc').value);
@@ -168,6 +171,7 @@ function aplica(){
     if(sub && d.subtipo!==sub) return false;
     if(clase && d.clase!==clase) return false;
     if(prov && d.provincia!==prov) return false;
+    if(loc && !((d.localidad||"").toLowerCase().includes(loc))) return false;
     if(est && d.estado!==est) return false;
     if(solomar && (d.dist_costa_m==null || d.dist_costa_m>500)) return false;
     if(!isNaN(pmerc) && (d.pct_mercado==null || d.pct_mercado*100>pmerc)) return false;
@@ -256,7 +260,7 @@ document.getElementById('dl').onclick=()=>{
   a.download="subastas_filtradas.csv"; a.click();
 };
 
-['q','pmax','sub','prov','est','solomar','pmerc','fdesde','fhasta','solog','soloc'].forEach(id=>{
+['q','pmax','sub','prov','loc','est','solomar','pmerc','fdesde','fhasta','solog','soloc'].forEach(id=>{
   const el=document.getElementById(id);
   el.addEventListener('input',aplica); el.addEventListener('change',aplica);});
 document.querySelectorAll('#claseSeg button').forEach(b=>b.onclick=()=>{
