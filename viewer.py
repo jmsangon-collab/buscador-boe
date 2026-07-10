@@ -52,6 +52,8 @@ TEMPLATE = r"""<!DOCTYPE html>
   td.desc{white-space:normal;max-width:520px;min-width:380px}
   tr:hover td{background:#1d2a37}
   tr.sel td{background:#264056}
+  td.fil{cursor:pointer}
+  td.fil:hover{text-decoration:underline;color:var(--acc)}
   tr.ganga td{background:#1e3320}
   tr.ganga td:first-child{border-left:3px solid #4ce0a0}
   a{color:var(--acc)}
@@ -200,12 +202,14 @@ function render(){
     const cerca = d.dist_costa_m!=null && d.dist_costa_m<=500;
     const pm = d.pct_mercado==null ? "" : Math.round(d.pct_mercado*100)+"%";
     h+=`<tr data-i="${i}" class="${d.ganga?'ganga':''}">`+
-      `<td>${fmt(d.precio_ref)} €</td><td><span class="pill">${d.subtipo||""}</span></td>`+
+      `<td>${fmt(d.precio_ref)} €</td>`+
+      `<td class="fil" data-f="sub" data-v="${d.subtipo||''}"><span class="pill">${d.subtipo||""}</span></td>`+
       `<td>${d.estado||""}</td>`+
       `<td>${fmt(d.superficie_m2)}</td><td>${fmt(d.eur_m2)}</td>`+
       `<td class="${d.ganga?'cerca':''}">${pm}</td>`+
       `<td class="${cerca?'cerca':''}">${d.dist_costa_m==null?"":fmt(d.dist_costa_m)}</td>`+
-      `<td>${d.localidad||""}</td><td>${d.provincia||""}</td>`+
+      `<td class="fil" data-f="loc" data-v="${(d.localidad||'').replace(/"/g,'')}">${d.localidad||""}</td>`+
+      `<td class="fil" data-f="prov" data-v="${(d.provincia||'').replace(/"/g,'')}">${d.provincia||""}</td>`+
       `<td class="desc">${(d.descripcion||"").slice(0,240)}</td>`+
       `<td>${d.fecha_inicio||""}</td><td>${d.fecha_fin||""}</td>`+
       `<td><a href="${d.url}" target="_blank">ver</a></td></tr>`;
@@ -230,6 +234,11 @@ function render(){
   document.querySelectorAll('#tabla tr[data-i]').forEach(tr=>{
     tr.onclick=()=>irAlPunto(tr,false);
     tr.oncontextmenu=(e)=>{e.preventDefault(); irAlPunto(tr,true);};
+  });
+  document.querySelectorAll('#tabla td.fil').forEach(td=>td.onclick=(e)=>{
+    e.stopPropagation();
+    const el=document.getElementById(td.dataset.f);
+    if(el){ el.value=td.dataset.v; aplica(); }
   });
   pintarMapa();
 }
