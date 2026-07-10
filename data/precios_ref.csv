@@ -1,0 +1,12 @@
+# Precios de referencia de mercado (EUR/m2) por BARRIO / DISTRITO / MUNICIPIO.
+# Construir UNA VEZ desde Idealista (informes de precio de vivienda por zona:
+# idealista.com/sala-de-prensa/informes-precio-vivienda) y dejar fijo.
+# La media provincial NO sirve: usa barrio o distrito siempre que puedas.
+# Formato: tipo;ambito;municipio;zona;eur_m2
+#   ambito = barrio | distrito | municipio   (zona vacia si ambito=municipio)
+# Ejemplos (SUSTITUIR por datos reales de tus zonas de interes):
+tipo;ambito;municipio;zona;eur_m2
+vivienda;municipio;Roquetas de Mar;;1600
+vivienda;distrito;Almeria;Centro;1900
+vivienda;barrio;Malaga;El Palo;2400
+vivienda;barrio;Malaga;Pedregalejo;3200

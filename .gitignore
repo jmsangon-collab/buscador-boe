@@ -1,0 +1,13 @@
+# Datos generados (se regeneran con los comandos)
+data/*.db
+data/*.xlsx
+data/*.csv
+!data/precios_ref.csv
+data/coastline.geojson
+data/visor.html
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/

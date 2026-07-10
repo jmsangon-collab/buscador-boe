@@ -1,0 +1,201 @@
+# -*- coding: utf-8 -*-
+"""Genera data/visor.html: un visor autonomo (tabla + filtros + mapa) con los
+datos embebidos. Se abre con doble clic en el navegador. Boton de descarga CSV
+(se abre directamente en Excel) sobre la seleccion filtrada.
+"""
+import json
+import os
+
+import dataset
+
+OUT = os.path.join(os.path.dirname(__file__), "data", "visor.html")
+
+
+def generar():
+    datos = dataset.cargar()
+    html = TEMPLATE.replace("/*DATOS*/", json.dumps(datos, ensure_ascii=False))
+    os.makedirs(os.path.dirname(OUT), exist_ok=True)
+    with open(OUT, "w", encoding="utf-8") as f:
+        f.write(html)
+    print(f"[OK] visor -> {OUT}  ({len(datos)} lotes). Abrelo con doble clic.")
+
+
+TEMPLATE = r"""<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Subastas BOE - Visor</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root{--bg:#0f1620;--panel:#182430;--line:#2a3a4a;--fg:#e6edf3;--mut:#8aa0b3;--acc:#3fb0ff}
+  *{box-sizing:border-box}
+  body{margin:0;font:14px/1.4 system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--fg)}
+  header{padding:12px 16px;background:var(--panel);border-bottom:1px solid var(--line);
+    display:flex;gap:16px;align-items:baseline;flex-wrap:wrap}
+  h1{font-size:16px;margin:0}
+  .mut{color:var(--mut)}
+  #filtros{display:flex;gap:10px;flex-wrap:wrap;padding:10px 16px;background:var(--panel);
+    border-bottom:1px solid var(--line);align-items:center}
+  #filtros label{display:flex;flex-direction:column;font-size:11px;color:var(--mut);gap:3px}
+  input,select,button{background:var(--bg);color:var(--fg);border:1px solid var(--line);
+    border-radius:6px;padding:6px 8px;font-size:13px}
+  button{cursor:pointer;background:var(--acc);color:#04121f;border:0;font-weight:600}
+  button.sec{background:var(--bg);color:var(--fg);border:1px solid var(--line);font-weight:400}
+  #wrap{display:flex;height:calc(100vh - 118px)}
+  #tabla{flex:1;overflow:auto}
+  #mapa{width:42%;min-width:320px}
+  table{border-collapse:collapse;width:100%;font-size:12.5px}
+  th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+  th{position:sticky;top:0;background:var(--panel);cursor:pointer;user-select:none}
+  td.desc{white-space:normal;max-width:340px}
+  tr:hover td{background:#1d2a37}
+  tr.sel td{background:#264056}
+  tr.ganga td{background:#1e3320}
+  tr.ganga td:first-child{border-left:3px solid #4ce0a0}
+  a{color:var(--acc)}
+  .pill{padding:1px 6px;border-radius:10px;font-size:11px;background:#233442}
+  .cerca{color:#4ce0a0;font-weight:600}
+</style>
+</head>
+<body>
+<header>
+  <h1>Subastas BOE</h1>
+  <span class="mut" id="stats"></span>
+</header>
+<div id="filtros">
+  <label>Texto<input id="q" placeholder="localidad, descripcion..."></label>
+  <label>Precio max (EUR)<input id="pmax" type="number" step="1000" value="60000"></label>
+  <label>Subtipo<select id="sub"><option value="">todos</option></select></label>
+  <label>Provincia<select id="prov"><option value="">todas</option></select></label>
+  <label>Estado<select id="est"><option value="">todos</option></select></label>
+  <label>Dist. mar max (m)<input id="dmar" type="number" step="100" placeholder="sin limite"></label>
+  <label>% mercado max<input id="pmerc" type="number" step="5" placeholder="ej: 70"></label>
+  <label style="flex-direction:row;align-items:center;gap:6px;color:var(--fg)">
+    <input id="solog" type="checkbox" style="width:auto"> solo gangas</label>
+  <label style="flex-direction:row;align-items:center;gap:6px;color:var(--fg)">
+    <input id="soloc" type="checkbox" style="width:auto"> solo geolocalizados</label>
+  <button id="dl">Descargar CSV (Excel)</button>
+</div>
+<div id="wrap">
+  <div id="tabla"></div>
+  <div id="mapa"></div>
+</div>
+<script>
+const DATOS = /*DATOS*/;
+const fmt = n => n==null ? "" : n.toLocaleString("es-ES",{maximumFractionDigits:0});
+let sortKey="precio_ref", sortDir=1, filtrados=[];
+
+const map = L.map('mapa').setView([40.0,-3.7], 5);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+  {maxZoom:19, attribution:'© OpenStreetMap'}).addTo(map);
+let capa = L.layerGroup().addTo(map);
+
+function unicos(k){return [...new Set(DATOS.map(d=>d[k]).filter(Boolean))].sort();}
+function llenar(sel,vals){vals.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o);});}
+llenar(document.getElementById('sub'), unicos('subtipo'));
+llenar(document.getElementById('prov'), unicos('provincia'));
+llenar(document.getElementById('est'), unicos('estado'));
+
+function aplica(){
+  const q=document.getElementById('q').value.toLowerCase();
+  const pmax=parseFloat(document.getElementById('pmax').value)||Infinity;
+  const sub=document.getElementById('sub').value;
+  const prov=document.getElementById('prov').value;
+  const est=document.getElementById('est').value;
+  const dmar=parseFloat(document.getElementById('dmar').value);
+  const pmerc=parseFloat(document.getElementById('pmerc').value);
+  const solog=document.getElementById('solog').checked;
+  const soloc=document.getElementById('soloc').checked;
+  filtrados = DATOS.filter(d=>{
+    if(d.precio_ref==null || d.precio_ref>pmax) return false;
+    if(sub && d.subtipo!==sub) return false;
+    if(prov && d.provincia!==prov) return false;
+    if(est && d.estado!==est) return false;
+    if(!isNaN(dmar) && (d.dist_costa_m==null || d.dist_costa_m>dmar)) return false;
+    if(!isNaN(pmerc) && (d.pct_mercado==null || d.pct_mercado*100>pmerc)) return false;
+    if(solog && !d.ganga) return false;
+    if(soloc && d.lat==null) return false;
+    if(q){const t=((d.descripcion||"")+" "+(d.localidad||"")+" "+(d.direccion||"")).toLowerCase();
+      if(!t.includes(q)) return false;}
+    return true;
+  });
+  filtrados.sort((a,b)=>{const x=a[sortKey],y=b[sortKey];
+    if(x==null)return 1; if(y==null)return -1; return (x>y?1:x<y?-1:0)*sortDir;});
+  render();
+}
+
+function render(){
+  const cols=[["precio_ref","Precio"],["subtipo","Tipo"],["estado","Estado"],
+    ["superficie_m2","m²"],["eur_m2","€/m²"],["pct_mercado","%merc"],
+    ["dist_costa_m","m mar"],["localidad","Localidad"],["provincia","Provincia"],
+    ["descripcion","Descripcion"],["fecha_fin","Fin"]];
+  let h="<table><thead><tr>";
+  cols.forEach(c=>h+=`<th data-k="${c[0]}">${c[1]}</th>`);
+  h+="<th>BOE</th></tr></thead><tbody>";
+  filtrados.forEach((d,i)=>{
+    const cerca = d.dist_costa_m!=null && d.dist_costa_m<=500;
+    const pm = d.pct_mercado==null ? "" : Math.round(d.pct_mercado*100)+"%";
+    h+=`<tr data-i="${i}" class="${d.ganga?'ganga':''}">`+
+      `<td>${fmt(d.precio_ref)} €</td><td><span class="pill">${d.subtipo||""}</span></td>`+
+      `<td>${d.estado||""}</td>`+
+      `<td>${fmt(d.superficie_m2)}</td><td>${fmt(d.eur_m2)}</td>`+
+      `<td class="${d.ganga?'cerca':''}">${pm}</td>`+
+      `<td class="${cerca?'cerca':''}">${d.dist_costa_m==null?"":fmt(d.dist_costa_m)}</td>`+
+      `<td>${d.localidad||""}</td><td>${d.provincia||""}</td>`+
+      `<td class="desc">${(d.descripcion||"").slice(0,140)}</td>`+
+      `<td>${d.fecha_fin||""}</td>`+
+      `<td><a href="${d.url}" target="_blank">ver</a></td></tr>`;
+  });
+  h+="</tbody></table>";
+  document.getElementById('tabla').innerHTML=h;
+  document.getElementById('stats').textContent=
+    `${filtrados.length} de ${DATOS.length} lotes · ${filtrados.filter(d=>d.dist_costa_m<=500).length} a <500 m del mar · ${filtrados.filter(d=>d.ganga).length} gangas`;
+  document.querySelectorAll('th[data-k]').forEach(th=>th.onclick=()=>{
+    const k=th.dataset.k; sortDir = (k===sortKey)? -sortDir : 1; sortKey=k; aplica();});
+  document.querySelectorAll('#tabla tr[data-i]').forEach(tr=>tr.onclick=()=>{
+    const d=filtrados[tr.dataset.i];
+    document.querySelectorAll('#tabla tr').forEach(r=>r.classList.remove('sel'));
+    tr.classList.add('sel');
+    if(d.lat){map.setView([d.lat,d.lon],14);}});
+  pintarMapa();
+}
+
+function pintarMapa(){
+  capa.clearLayers();
+  filtrados.filter(d=>d.lat).forEach(d=>{
+    const cerca=d.dist_costa_m!=null&&d.dist_costa_m<=500;
+    L.circleMarker([d.lat,d.lon],{radius:6,color:cerca?'#4ce0a0':'#3fb0ff',
+      fillOpacity:.8,weight:1}).addTo(capa).bindPopup(
+      `<b>${fmt(d.precio_ref)} €</b> · ${d.subtipo}${d.ganga?' 🔥GANGA':''}<br>${d.localidad||""} (${d.provincia||""})`+
+      `<br>${d.eur_m2!=null?fmt(d.eur_m2)+" €/m²"+(d.pct_mercado!=null?" ("+Math.round(d.pct_mercado*100)+"% mercado)":"")+"<br>":""}`+
+      `${d.dist_costa_m!=null?fmt(d.dist_costa_m)+" m del mar<br>":""}`+
+      `${(d.descripcion||"").slice(0,120)}<br><a href="${d.url}" target="_blank">Ficha BOE</a>`);
+  });
+}
+
+document.getElementById('dl').onclick=()=>{
+  const cols=["id_sub","subtipo","estado","precio_ref","valor_subasta","postura_minima",
+    "deposito","superficie_m2","eur_m2","eur_m2_ref","pct_mercado","ganga",
+    "descripcion","direccion","localidad","provincia","dist_costa_m",
+    "lat","lon","fecha_fin","url"];
+  const esc=v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"';
+  let csv="﻿"+cols.join(";")+"\n";
+  filtrados.forEach(d=>csv+=cols.map(c=>esc(d[c])).join(";")+"\n");
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
+  a.download="subastas_filtradas.csv"; a.click();
+};
+
+['q','pmax','sub','prov','est','dmar','pmerc','solog','soloc'].forEach(id=>{
+  const el=document.getElementById(id);
+  el.addEventListener('input',aplica); el.addEventListener('change',aplica);});
+aplica();
+</script>
+</body>
+</html>"""
+
+
+if __name__ == "__main__":
+    generar()
