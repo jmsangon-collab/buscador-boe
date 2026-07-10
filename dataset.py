@@ -11,8 +11,18 @@ CAMPOS = ["id_sub", "subtipo", "estado", "precio_ref", "valor_subasta",
           "postura_minima", "deposito", "superficie_m2", "eur_m2",
           "eur_m2_ref", "ref_ambito", "pct_mercado", "ganga", "descripcion",
           "direccion", "localidad", "barrio", "distrito", "provincia",
-          "dist_costa_m", "lat", "lon", "fecha_inicio", "fecha_fin",
+          "clase", "dist_costa_m", "lat", "lon", "fecha_inicio", "fecha_fin",
           "anuncio_boe", "url"]
+
+
+def _clase(descripcion, subtipo):
+    """rural / urbano / desconocido, segun la descripcion registral del BOE."""
+    t = (descripcion or "").upper()
+    if "RUSTICA" in t or "R\xdaSTICA" in t or "RÚSTICA" in t:
+        return "rural"
+    if "URBANA" in t:
+        return "urbano"
+    return {"finca_rustica": "rural", "solar": "urbano", "vivienda": "urbano"}.get(subtipo, "desconocido")
 
 
 def _fecha_iso(txt):
@@ -43,6 +53,7 @@ def cargar():
         d["ref_ambito"] = amb
         d["pct_mercado"] = round(d["eur_m2"] / rm2, 3) if (d["eur_m2"] and rm2) else None
         d["ganga"] = bool(d["pct_mercado"] is not None and d["pct_mercado"] <= precios.UMBRAL_GANGA)
+        d["clase"] = _clase(d.get("descripcion"), d.get("subtipo"))
         d["fecha_inicio"] = _fecha_iso(d.get("fecha_inicio"))
         d["fecha_fin"] = _fecha_iso(d.get("fecha_fin"))
         out.append({k: d.get(k) for k in CAMPOS})

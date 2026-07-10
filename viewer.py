@@ -57,6 +57,12 @@ TEMPLATE = r"""<!DOCTYPE html>
   a{color:var(--acc)}
   .pill{padding:1px 6px;border-radius:10px;font-size:11px;background:#233442}
   .cerca{color:#4ce0a0;font-weight:600}
+  .sw{flex-direction:row!important;align-items:center;gap:6px;color:var(--fg)!important;cursor:pointer;font-size:13px}
+  .sw input{display:none}
+  .sw .track{width:34px;height:18px;background:#2a3a4a;border-radius:10px;position:relative;transition:.2s;display:inline-block}
+  .sw .track::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;background:#8aa0b3;border-radius:50%;transition:.2s}
+  .sw input:checked + .track{background:#4ce0a0}
+  .sw input:checked + .track::after{transform:translateX(16px);background:#04121f}
 </style>
 </head>
 <body>
@@ -68,10 +74,11 @@ TEMPLATE = r"""<!DOCTYPE html>
   <label>Texto<input id="q" placeholder="localidad, descripcion..."></label>
   <label>Precio max (EUR)<input id="pmax" type="number" step="1000" value="60000"></label>
   <label>Subtipo<select id="sub"><option value="">todos</option></select></label>
+  <label>Clase<select id="clase"><option value="">todas</option><option value="urbano">urbano</option><option value="rural">rural</option></select></label>
   <label>Provincia<select id="prov"><option value="">todas</option></select></label>
   <label>Estado<select id="est"><option value="">todos</option></select></label>
-  <label>Dist. mar max (m)<input id="dmar" type="number" step="100" placeholder="sin limite"></label>
   <label>% mercado max<input id="pmerc" type="number" step="5" placeholder="ej: 70"></label>
+  <label class="sw"><input id="solomar" type="checkbox"><span class="track"></span> &lt;500 m del mar</label>
   <label>Cierra desde<input id="fdesde" type="date"></label>
   <label>Cierra hasta<input id="fhasta" type="date"></label>
   <label>Ordenar por<select id="orden">
@@ -97,10 +104,39 @@ const DATOS = /*DATOS*/;
 const fmt = n => n==null ? "" : n.toLocaleString("es-ES",{maximumFractionDigits:0});
 let sortKey="fecha_fin", sortDir=1, filtrados=[];
 
-const map = L.map('mapa').setView([40.0,-3.7], 5);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-  {maxZoom:19, attribution:'© OpenStreetMap'}).addTo(map);
+const VISTA_ESP=[[27.5,-19.0],[44.0,4.5]]; // bounds Espana (incl. Canarias)
+const map = L.map('mapa').fitBounds(VISTA_ESP);
+const satelite = L.tileLayer(
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  {maxZoom:19, attribution:'© Esri, Maxar, Earthstar'}).addTo(map);
+const callejero = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+  {maxZoom:19, attribution:'© OpenStreetMap'});
+// etiquetas de calles/nombres encima del satelite
+const etiquetas = L.tileLayer(
+  'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+  {maxZoom:19}).addTo(map);
+L.control.layers({"Satélite":satelite,"Callejero":callejero},
+  {"Etiquetas (satélite)":etiquetas},{position:'topright'}).addTo(map);
 let capa = L.layerGroup().addTo(map);
+let markers = {};
+
+// boton "Vista general" para volver a ver toda Espana
+const Home = L.Control.extend({options:{position:'topleft'},
+  onAdd:function(){
+    const b=L.DomUtil.create('button','','');
+    b.innerHTML='🏠 Vista general';
+    b.style.cssText='background:#182430;color:#e6edf3;border:1px solid #2a3a4a;'
+      +'border-radius:6px;padding:6px 8px;cursor:pointer;font-size:12px';
+    L.DomEvent.disableClickPropagation(b);
+    b.onclick=()=>{ if(!zoomAFiltrados()) map.fitBounds(VISTA_ESP); };
+    return b;}});
+map.addControl(new Home());
+
+function zoomAFiltrados(){
+  const pts=filtrados.filter(d=>d.lat).map(d=>[d.lat,d.lon]);
+  if(pts.length){ map.fitBounds(pts,{padding:[40,40],maxZoom:13}); return true; }
+  return false;
+}
 
 function unicos(k){return [...new Set(DATOS.map(d=>d[k]).filter(Boolean))].sort();}
 function llenar(sel,vals){vals.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o);});}
@@ -112,9 +148,10 @@ function aplica(){
   const q=document.getElementById('q').value.toLowerCase();
   const pmax=parseFloat(document.getElementById('pmax').value)||Infinity;
   const sub=document.getElementById('sub').value;
+  const clase=document.getElementById('clase').value;
   const prov=document.getElementById('prov').value;
   const est=document.getElementById('est').value;
-  const dmar=parseFloat(document.getElementById('dmar').value);
+  const solomar=document.getElementById('solomar').checked;
   const pmerc=parseFloat(document.getElementById('pmerc').value);
   const fdesde=document.getElementById('fdesde').value;
   const fhasta=document.getElementById('fhasta').value;
@@ -123,9 +160,10 @@ function aplica(){
   filtrados = DATOS.filter(d=>{
     if(d.precio_ref==null || d.precio_ref>pmax) return false;
     if(sub && d.subtipo!==sub) return false;
+    if(clase && d.clase!==clase) return false;
     if(prov && d.provincia!==prov) return false;
     if(est && d.estado!==est) return false;
-    if(!isNaN(dmar) && (d.dist_costa_m==null || d.dist_costa_m>dmar)) return false;
+    if(solomar && (d.dist_costa_m==null || d.dist_costa_m>500)) return false;
     if(!isNaN(pmerc) && (d.pct_mercado==null || d.pct_mercado*100>pmerc)) return false;
     if(fdesde && (!d.fecha_fin || d.fecha_fin<fdesde)) return false;
     if(fhasta && (!d.fecha_fin || d.fecha_fin>fhasta)) return false;
@@ -168,20 +206,30 @@ function render(){
     `${filtrados.length} de ${DATOS.length} lotes · ${filtrados.filter(d=>d.dist_costa_m<=500).length} a <500 m del mar · ${filtrados.filter(d=>d.ganga).length} gangas`;
   document.querySelectorAll('th[data-k]').forEach(th=>th.onclick=()=>{
     const k=th.dataset.k; sortDir = (k===sortKey)? -sortDir : 1; sortKey=k; aplica();});
-  document.querySelectorAll('#tabla tr[data-i]').forEach(tr=>tr.onclick=()=>{
+  function irAlPunto(tr, volar){
     const d=filtrados[tr.dataset.i];
     document.querySelectorAll('#tabla tr').forEach(r=>r.classList.remove('sel'));
     tr.classList.add('sel');
-    if(d.lat){map.setView([d.lat,d.lon],14);}});
+    if(d.lat){
+      const m=markers[d.id_sub];
+      if(volar){ map.flyTo([d.lat,d.lon],17,{duration:1.1}); }
+      else { map.setView([d.lat,d.lon],15); }
+      if(m) setTimeout(()=>m.openPopup(), volar?900:0);
+    }
+  }
+  document.querySelectorAll('#tabla tr[data-i]').forEach(tr=>{
+    tr.onclick=()=>irAlPunto(tr,false);
+    tr.oncontextmenu=(e)=>{e.preventDefault(); irAlPunto(tr,true);};
+  });
   pintarMapa();
 }
 
 function pintarMapa(){
-  capa.clearLayers();
+  capa.clearLayers(); markers={};
   filtrados.filter(d=>d.lat).forEach(d=>{
     const cerca=d.dist_costa_m!=null&&d.dist_costa_m<=500;
-    L.circleMarker([d.lat,d.lon],{radius:6,color:cerca?'#4ce0a0':'#3fb0ff',
-      fillOpacity:.8,weight:1}).addTo(capa).bindPopup(
+    markers[d.id_sub]=L.circleMarker([d.lat,d.lon],{radius:6,color:cerca?'#4ce0a0':'#3fb0ff',
+      fillOpacity:.9,weight:2}).addTo(capa).bindPopup(
       `<b>${fmt(d.precio_ref)} €</b> · ${d.subtipo}${d.ganga?' 🔥GANGA':''}<br>${d.localidad||""} (${d.provincia||""})`+
       `<br>${d.eur_m2!=null?fmt(d.eur_m2)+" €/m²"+(d.pct_mercado!=null?" ("+Math.round(d.pct_mercado*100)+"% mercado)":"")+"<br>":""}`+
       `${d.dist_costa_m!=null?fmt(d.dist_costa_m)+" m del mar<br>":""}`+
@@ -202,7 +250,7 @@ document.getElementById('dl').onclick=()=>{
   a.download="subastas_filtradas.csv"; a.click();
 };
 
-['q','pmax','sub','prov','est','dmar','pmerc','fdesde','fhasta','solog','soloc'].forEach(id=>{
+['q','pmax','sub','clase','prov','est','solomar','pmerc','fdesde','fhasta','solog','soloc'].forEach(id=>{
   const el=document.getElementById(id);
   el.addEventListener('input',aplica); el.addEventListener('change',aplica);});
 document.getElementById('orden').addEventListener('change',e=>{
