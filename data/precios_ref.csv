@@ -56,3 +56,44 @@ vivienda;municipio;Manilva;;2600
 vivienda;municipio;Rincon de la Victoria;;2600
 vivienda;municipio;Velez-Malaga;;2200
 vivienda;municipio;Torre del Mar;;2300
+#
+# ===================== CADIZ =====================
+vivienda;municipio;Cadiz;;2800
+vivienda;municipio;Jerez de la Frontera;;1500
+vivienda;municipio;El Puerto de Santa Maria;;2600
+vivienda;municipio;Chiclana de la Frontera;;2200
+vivienda;municipio;Conil de la Frontera;;2600
+vivienda;municipio;Rota;;2200
+vivienda;municipio;Sanlucar de Barrameda;;1900
+vivienda;municipio;San Fernando;;1800
+vivienda;municipio;Puerto Real;;1600
+vivienda;municipio;Barbate;;1900
+vivienda;barrio;Barbate;Zahara de los Atunes;4268
+vivienda;municipio;Vejer de la Frontera;;2500
+vivienda;municipio;Tarifa;;5000
+vivienda;municipio;Algeciras;;1400
+vivienda;municipio;La Linea de la Concepcion;;1500
+#
+# ===================== HUELVA =====================
+vivienda;municipio;Huelva;;1400
+vivienda;municipio;Isla Cristina;;1579
+vivienda;municipio;Ayamonte;;1900
+vivienda;municipio;Punta Umbria;;2200
+vivienda;municipio;Lepe;;1300
+vivienda;municipio;Cartaya;;1500
+vivienda;municipio;Almonte;;1200
+vivienda;barrio;Almonte;Matalascanas;2400
+vivienda;municipio;Moguer;;1200
+vivienda;municipio;Palos de la Frontera;;1300
+#
+# ===================== SEVILLA =====================
+vivienda;barrio;Sevilla;Centro;4100
+vivienda;barrio;Sevilla;Triana;3733
+vivienda;barrio;Sevilla;Nervion;3500
+vivienda;barrio;Sevilla;Los Remedios;3600
+vivienda;barrio;Sevilla;San Bernardo;3800
+vivienda;barrio;Sevilla;La Buhaira;3800
+vivienda;barrio;Sevilla;Sevilla Este;1900
+vivienda;municipio;Sevilla;;2737
+vivienda;municipio;Dos Hermanas;;1700
+vivienda;municipio;Utrera;;1200
