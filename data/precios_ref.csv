@@ -1,12 +1,58 @@
 # Precios de referencia de mercado (EUR/m2) por BARRIO / DISTRITO / MUNICIPIO.
-# Construir UNA VEZ desde Idealista (informes de precio de vivienda por zona:
-# idealista.com/sala-de-prensa/informes-precio-vivienda) y dejar fijo.
-# La media provincial NO sirve: usa barrio o distrito siempre que puedas.
-# Formato: tipo;ambito;municipio;zona;eur_m2
-#   ambito = barrio | distrito | municipio   (zona vacia si ambito=municipio)
-# Ejemplos (SUSTITUIR por datos reales de tus zonas de interes):
+# Vivienda 2ª mano. Fuente: Idealista (informes de precio por zona) y prensa
+# (La Voz de Almería, El Español-Málaga), datos 2025-2026. ACTUALIZAR periodicamente.
+# La media provincial NO se usa: comparar por barrio/distrito/municipio.
+# Formato: tipo;ambito;municipio;zona;eur_m2   (zona vacia si ambito=municipio)
 tipo;ambito;municipio;zona;eur_m2
-vivienda;municipio;Roquetas de Mar;;1600
-vivienda;distrito;Almeria;Centro;1900
-vivienda;barrio;Malaga;El Palo;2400
-vivienda;barrio;Malaga;Pedregalejo;3200
+#
+# ===================== ALMERIA =====================
+# --- Almeria capital: barrios ---
+vivienda;barrio;Almeria;El Zapillo;2318
+vivienda;barrio;Almeria;Zapillo;2318
+vivienda;barrio;Almeria;Retamar;2167
+vivienda;barrio;Almeria;El Toyo;2224
+vivienda;barrio;Almeria;Nueva Almeria;2589
+vivienda;barrio;Almeria;Vega de Aca;2589
+vivienda;barrio;Almeria;Centro;2000
+vivienda;barrio;Almeria;La Chanca;1300
+vivienda;barrio;Almeria;Pescaderia;1300
+vivienda;municipio;Almeria;;1900
+# --- Almeria: municipios costeros ---
+vivienda;municipio;Roquetas de Mar;;1700
+vivienda;barrio;Roquetas de Mar;Aguadulce;1900
+vivienda;municipio;El Ejido;;1300
+vivienda;barrio;El Ejido;Almerimar;2328
+vivienda;municipio;Adra;;1250
+vivienda;municipio;Mojacar;;2500
+vivienda;municipio;Vera;;1750
+vivienda;municipio;Garrucha;;2100
+vivienda;municipio;Carboneras;;1800
+vivienda;municipio;Nijar;;2000
+vivienda;barrio;Nijar;San Jose;2500
+vivienda;municipio;Pulpi;;2000
+vivienda;barrio;Pulpi;San Juan de los Terreros;2389
+#
+# ===================== MALAGA =====================
+# --- Malaga capital: barrios/distritos ---
+vivienda;barrio;Malaga;Pedregalejo;4958
+vivienda;barrio;Malaga;El Palo;3200
+vivienda;barrio;Malaga;Huelin;4000
+vivienda;barrio;Malaga;Trinidad;4000
+vivienda;barrio;Malaga;Teatinos;3734
+vivienda;barrio;Malaga;Centro Historico;4500
+vivienda;barrio;Malaga;Centro;4500
+vivienda;barrio;Malaga;Carretera de Cadiz;3000
+vivienda;barrio;Malaga;Churriana;3000
+vivienda;municipio;Malaga;;3720
+# --- Malaga: municipios Costa del Sol ---
+vivienda;municipio;Marbella;;5430
+vivienda;municipio;Fuengirola;;4407
+vivienda;municipio;Estepona;;4091
+vivienda;municipio;Torremolinos;;3925
+vivienda;municipio;Nerja;;3738
+vivienda;municipio;Mijas;;3637
+vivienda;municipio;Benalmadena;;3800
+vivienda;municipio;Manilva;;2600
+vivienda;municipio;Rincon de la Victoria;;2600
+vivienda;municipio;Velez-Malaga;;2200
+vivienda;municipio;Torre del Mar;;2300
