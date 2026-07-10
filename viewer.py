@@ -63,6 +63,10 @@ TEMPLATE = r"""<!DOCTYPE html>
   .sw .track::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;background:#8aa0b3;border-radius:50%;transition:.2s}
   .sw input:checked + .track{background:#4ce0a0}
   .sw input:checked + .track::after{transform:translateX(16px);background:#04121f}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+  .seg button{border:0;border-radius:0;background:var(--bg);color:var(--mut);padding:6px 10px;font-size:12px;cursor:pointer}
+  .seg button+button{border-left:1px solid var(--line)}
+  .seg button.on{background:#4ce0a0;color:#04121f;font-weight:600}
 </style>
 </head>
 <body>
@@ -74,7 +78,9 @@ TEMPLATE = r"""<!DOCTYPE html>
   <label>Texto<input id="q" placeholder="localidad, descripcion..."></label>
   <label>Precio max (EUR)<input id="pmax" type="number" step="1000" value="60000"></label>
   <label>Subtipo<select id="sub"><option value="">todos</option></select></label>
-  <label>Clase<select id="clase"><option value="">todas</option><option value="urbano">urbano</option><option value="rural">rural</option></select></label>
+  <label>Clase<span class="seg" id="claseSeg">
+    <button type="button" data-v="" class="on">Todas</button><button type="button" data-v="urbano">Urbano</button><button type="button" data-v="rural">Rural</button>
+  </span></label>
   <label>Provincia<select id="prov"><option value="">todas</option></select></label>
   <label>Estado<select id="est"><option value="">todos</option></select></label>
   <label>% mercado max<input id="pmerc" type="number" step="5" placeholder="ej: 70"></label>
@@ -102,7 +108,7 @@ TEMPLATE = r"""<!DOCTYPE html>
 <script>
 const DATOS = /*DATOS*/;
 const fmt = n => n==null ? "" : n.toLocaleString("es-ES",{maximumFractionDigits:0});
-let sortKey="fecha_fin", sortDir=1, filtrados=[];
+let sortKey="fecha_fin", sortDir=1, filtrados=[], claseVal="";
 
 const VISTA_ESP=[[27.5,-19.0],[44.0,4.5]]; // bounds Espana (incl. Canarias)
 const map = L.map('mapa').fitBounds(VISTA_ESP);
@@ -148,7 +154,7 @@ function aplica(){
   const q=document.getElementById('q').value.toLowerCase();
   const pmax=parseFloat(document.getElementById('pmax').value)||Infinity;
   const sub=document.getElementById('sub').value;
-  const clase=document.getElementById('clase').value;
+  const clase=claseVal;
   const prov=document.getElementById('prov').value;
   const est=document.getElementById('est').value;
   const solomar=document.getElementById('solomar').checked;
@@ -250,9 +256,12 @@ document.getElementById('dl').onclick=()=>{
   a.download="subastas_filtradas.csv"; a.click();
 };
 
-['q','pmax','sub','clase','prov','est','solomar','pmerc','fdesde','fhasta','solog','soloc'].forEach(id=>{
+['q','pmax','sub','prov','est','solomar','pmerc','fdesde','fhasta','solog','soloc'].forEach(id=>{
   const el=document.getElementById(id);
   el.addEventListener('input',aplica); el.addEventListener('change',aplica);});
+document.querySelectorAll('#claseSeg button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#claseSeg button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); claseVal=b.dataset.v; aplica();});
 document.getElementById('orden').addEventListener('change',e=>{
   const [k,dd]=e.target.value.split("|"); sortKey=k; sortDir=parseInt(dd); aplica();});
 aplica();
