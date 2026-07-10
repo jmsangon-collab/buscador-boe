@@ -49,7 +49,7 @@ TEMPLATE = r"""<!DOCTYPE html>
   table{border-collapse:collapse;width:100%;font-size:12.5px}
   th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
   th{position:sticky;top:0;background:var(--panel);cursor:pointer;user-select:none}
-  td.desc{white-space:normal;max-width:340px}
+  td.desc{white-space:normal;max-width:520px;min-width:380px}
   tr:hover td{background:#1d2a37}
   tr.sel td{background:#264056}
   tr.ganga td{background:#1e3320}
@@ -72,6 +72,16 @@ TEMPLATE = r"""<!DOCTYPE html>
   <label>Estado<select id="est"><option value="">todos</option></select></label>
   <label>Dist. mar max (m)<input id="dmar" type="number" step="100" placeholder="sin limite"></label>
   <label>% mercado max<input id="pmerc" type="number" step="5" placeholder="ej: 70"></label>
+  <label>Cierra desde<input id="fdesde" type="date"></label>
+  <label>Cierra hasta<input id="fhasta" type="date"></label>
+  <label>Ordenar por<select id="orden">
+    <option value="fecha_fin|1">Cierre (proximo primero)</option>
+    <option value="fecha_inicio|-1">Publicacion (reciente primero)</option>
+    <option value="precio_ref|1">Precio (barato primero)</option>
+    <option value="eur_m2|1">€/m² (barato primero)</option>
+    <option value="pct_mercado|1">% mercado (ganga primero)</option>
+    <option value="dist_costa_m|1">Distancia al mar</option>
+  </select></label>
   <label style="flex-direction:row;align-items:center;gap:6px;color:var(--fg)">
     <input id="solog" type="checkbox" style="width:auto"> solo gangas</label>
   <label style="flex-direction:row;align-items:center;gap:6px;color:var(--fg)">
@@ -85,7 +95,7 @@ TEMPLATE = r"""<!DOCTYPE html>
 <script>
 const DATOS = /*DATOS*/;
 const fmt = n => n==null ? "" : n.toLocaleString("es-ES",{maximumFractionDigits:0});
-let sortKey="precio_ref", sortDir=1, filtrados=[];
+let sortKey="fecha_fin", sortDir=1, filtrados=[];
 
 const map = L.map('mapa').setView([40.0,-3.7], 5);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -106,6 +116,8 @@ function aplica(){
   const est=document.getElementById('est').value;
   const dmar=parseFloat(document.getElementById('dmar').value);
   const pmerc=parseFloat(document.getElementById('pmerc').value);
+  const fdesde=document.getElementById('fdesde').value;
+  const fhasta=document.getElementById('fhasta').value;
   const solog=document.getElementById('solog').checked;
   const soloc=document.getElementById('soloc').checked;
   filtrados = DATOS.filter(d=>{
@@ -115,6 +127,8 @@ function aplica(){
     if(est && d.estado!==est) return false;
     if(!isNaN(dmar) && (d.dist_costa_m==null || d.dist_costa_m>dmar)) return false;
     if(!isNaN(pmerc) && (d.pct_mercado==null || d.pct_mercado*100>pmerc)) return false;
+    if(fdesde && (!d.fecha_fin || d.fecha_fin<fdesde)) return false;
+    if(fhasta && (!d.fecha_fin || d.fecha_fin>fhasta)) return false;
     if(solog && !d.ganga) return false;
     if(soloc && d.lat==null) return false;
     if(q){const t=((d.descripcion||"")+" "+(d.localidad||"")+" "+(d.direccion||"")).toLowerCase();
@@ -130,7 +144,7 @@ function render(){
   const cols=[["precio_ref","Precio"],["subtipo","Tipo"],["estado","Estado"],
     ["superficie_m2","m²"],["eur_m2","€/m²"],["pct_mercado","%merc"],
     ["dist_costa_m","m mar"],["localidad","Localidad"],["provincia","Provincia"],
-    ["descripcion","Descripcion"],["fecha_fin","Fin"]];
+    ["descripcion","Descripcion"],["fecha_inicio","Apertura"],["fecha_fin","Cierre"]];
   let h="<table><thead><tr>";
   cols.forEach(c=>h+=`<th data-k="${c[0]}">${c[1]}</th>`);
   h+="<th>BOE</th></tr></thead><tbody>";
@@ -144,8 +158,8 @@ function render(){
       `<td class="${d.ganga?'cerca':''}">${pm}</td>`+
       `<td class="${cerca?'cerca':''}">${d.dist_costa_m==null?"":fmt(d.dist_costa_m)}</td>`+
       `<td>${d.localidad||""}</td><td>${d.provincia||""}</td>`+
-      `<td class="desc">${(d.descripcion||"").slice(0,140)}</td>`+
-      `<td>${d.fecha_fin||""}</td>`+
+      `<td class="desc">${(d.descripcion||"").slice(0,240)}</td>`+
+      `<td>${d.fecha_inicio||""}</td><td>${d.fecha_fin||""}</td>`+
       `<td><a href="${d.url}" target="_blank">ver</a></td></tr>`;
   });
   h+="</tbody></table>";
@@ -179,7 +193,7 @@ document.getElementById('dl').onclick=()=>{
   const cols=["id_sub","subtipo","estado","precio_ref","valor_subasta","postura_minima",
     "deposito","superficie_m2","eur_m2","eur_m2_ref","pct_mercado","ganga",
     "descripcion","direccion","localidad","provincia","dist_costa_m",
-    "lat","lon","fecha_fin","url"];
+    "lat","lon","fecha_inicio","fecha_fin","anuncio_boe","url"];
   const esc=v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"';
   let csv="﻿"+cols.join(";")+"\n";
   filtrados.forEach(d=>csv+=cols.map(c=>esc(d[c])).join(";")+"\n");
@@ -188,9 +202,11 @@ document.getElementById('dl').onclick=()=>{
   a.download="subastas_filtradas.csv"; a.click();
 };
 
-['q','pmax','sub','prov','est','dmar','pmerc','solog','soloc'].forEach(id=>{
+['q','pmax','sub','prov','est','dmar','pmerc','fdesde','fhasta','solog','soloc'].forEach(id=>{
   const el=document.getElementById(id);
   el.addEventListener('input',aplica); el.addEventListener('change',aplica);});
+document.getElementById('orden').addEventListener('change',e=>{
+  const [k,dd]=e.target.value.split("|"); sortKey=k; sortDir=parseInt(dd); aplica();});
 aplica();
 </script>
 </body>
