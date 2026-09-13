@@ -79,7 +79,7 @@ def geocodificar(direccion, localidad, provincia, cod_postal=None):
     """Devuelve dict(lat, lon, barrio, distrito, municipio, precision) o None.
     Intenta primero la direccion completa (limpia); si falla, cae a nivel de
     municipio para que el lote aparezca al menos en el pueblo. precision =
-    'exacta' | 'municipio'."""
+    'exacta' | 'municipio' | 'provincia'."""
     loc = None if (not localidad or localidad == "No consta") else localidad
     prov = None if (not provincia or provincia == "No consta") else provincia
     dir_limpia = limpiar_direccion(direccion)
@@ -90,6 +90,9 @@ def geocodificar(direccion, localidad, provincia, cod_postal=None):
     # plan B: solo municipio (o CP) para no perder el lote
     if loc or cod_postal:
         intentos.append(("municipio", ", ".join(p for p in (loc, cod_postal, prov) if p) + ", Espana"))
+    # plan C: capital de provincia, para que el lote aparezca siempre en el mapa
+    if prov:
+        intentos.append(("provincia", f"{prov}, Espana"))
 
     for precision, q in intentos:
         d = _pedir(q)

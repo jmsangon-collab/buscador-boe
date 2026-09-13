@@ -80,9 +80,9 @@ def enrich(args):
         if g:
             dcm = coast.metros(g["lat"], g["lon"])
             con.execute("UPDATE subastas SET lat=?, lon=?, dist_costa_m=?, barrio=?, "
-                        "distrito=?, municipio_geo=?, geocode_estado='ok' WHERE id_sub=?",
+                        "distrito=?, municipio_geo=?, geocode_estado=? WHERE id_sub=?",
                         (g["lat"], g["lon"], dcm, g["barrio"], g["distrito"],
-                         g["municipio"], f["id_sub"]))
+                         g["municipio"], g["precision"], f["id_sub"]))
         else:
             con.execute("UPDATE subastas SET geocode_estado='no_encontrado' WHERE id_sub=?",
                         (f["id_sub"],))

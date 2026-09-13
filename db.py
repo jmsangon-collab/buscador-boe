@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS subastas (
     lat               REAL,
     lon               REAL,
     dist_costa_m      REAL,
-    geocode_estado    TEXT,   -- ok / no_encontrado / error
+    geocode_estado    TEXT,   -- exacta / municipio / provincia / no_encontrado
     fetched_at        TEXT
 );
 """
@@ -71,5 +71,5 @@ def upsert(con, row):
 
 def pendientes_geocode(con):
     return con.execute(
-        "SELECT * FROM subastas WHERE lat IS NULL AND geocode_estado IS NULL"
+        "SELECT * FROM subastas WHERE lat IS NULL"
     ).fetchall()

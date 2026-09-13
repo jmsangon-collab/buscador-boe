@@ -11,7 +11,7 @@ import provincias
 CAMPOS = ["id_sub", "subtipo", "estado", "precio_ref", "valor_subasta",
           "postura_minima", "deposito", "cantidad_reclamada", "superficie_m2", "eur_m2",
           "descripcion", "direccion", "localidad", "barrio", "distrito",
-          "provincia", "ccaa", "clase", "dist_costa_m", "lat", "lon",
+          "provincia", "ccaa", "clase", "dist_costa_m", "lat", "lon", "precision",
           "fecha_inicio", "fecha_fin", "fecha_fin_dt", "num_pujas", "puja_maxima",
           "sin_pujas", "anuncio_boe", "url"]
 
@@ -60,6 +60,8 @@ def cargar():
         fin_raw = d.get("fecha_fin")
         d["fecha_fin_dt"] = _fecha_iso_dt(fin_raw)
         d["fecha_fin"] = _fecha_iso(fin_raw)
+        ge = d.get("geocode_estado")
+        d["precision"] = "exacta" if ge == "ok" else ge  # BD antiguas: ok == exacta
         np = d.get("num_pujas")
         d["sin_pujas"] = (np == 0)
         out.append({k: d.get(k) for k in CAMPOS})

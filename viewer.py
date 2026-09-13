@@ -63,336 +63,478 @@ TEMPLATE = r"""<!DOCTYPE html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Subastas BOE - Visor</title>
+<title>Subastas BOE · Viviendas y terrenos</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <style>
-  :root{--bg:#0f1620;--panel:#182430;--line:#2a3a4a;--fg:#e6edf3;--mut:#8aa0b3;--acc:#3fb0ff}
+  :root{
+    --bg:#f4f6f9;--panel:#ffffff;--line:#e3e8ee;--fg:#1c2430;--mut:#66788c;
+    --acc:#1f6feb;--acc-soft:#e8f0fe;--ok:#0f9d6b;--ok-soft:#e3f6ee;--warn:#c77800;--warn-soft:#fff3df;
+    --bad:#d43f3f;--bad-soft:#fde9e9;--navy:#132238;--r:10px;--sh:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.1)
+  }
   *{box-sizing:border-box}
-  body{margin:0;font:14px/1.4 system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--fg)}
-  header{padding:12px 16px;background:var(--panel);border-bottom:1px solid var(--line);
-    display:flex;gap:16px;align-items:baseline;flex-wrap:wrap}
-  h1{font-size:16px;margin:0}
+  html,body{height:100%}
+  body{margin:0;font:14px/1.45 -apple-system,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--fg)}
+  a{color:var(--acc);text-decoration:none}
+  a:hover{text-decoration:underline}
+  button{font:inherit;cursor:pointer}
   .mut{color:var(--mut)}
-  #filtros{display:flex;gap:10px;flex-wrap:wrap;padding:10px 16px;background:var(--panel);
-    border-bottom:1px solid var(--line);align-items:center}
-  #filtros label{display:flex;flex-direction:column;font-size:11px;color:var(--mut);gap:3px}
-  input,select,button{background:var(--bg);color:var(--fg);border:1px solid var(--line);
-    border-radius:6px;padding:6px 8px;font-size:13px}
-  button{cursor:pointer;background:var(--acc);color:#04121f;border:0;font-weight:600}
-  button.sec{background:var(--bg);color:var(--fg);border:1px solid var(--line);font-weight:400}
-  #wrap{display:flex;height:calc(100vh - 118px)}
-  #tabla{flex:1;overflow:auto}
-  #mapa{width:42%;min-width:320px}
-  table{border-collapse:collapse;width:100%;font-size:12.5px}
-  th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
-  th{position:sticky;top:0;background:var(--panel);cursor:pointer;user-select:none}
-  td.desc{white-space:normal;max-width:520px;min-width:380px}
-  tr:hover td{background:#1d2a37}
-  tr.sel td{background:#264056}
-  td.fil{cursor:pointer}
-  td.fil:hover{text-decoration:underline;color:var(--acc)}
-  a{color:var(--acc)}
-  .pill{padding:1px 6px;border-radius:10px;font-size:11px;background:#233442}
-  .cerca{color:#4ce0a0;font-weight:600}
-  tr.oportunidad td{background:#31240f}
-  tr.oportunidad td:first-child{border-left:3px solid #ffb020}
-  .nopuja{color:#ffb020;font-weight:600}
-  .urge{color:#ff6b6b;font-weight:600}
-  .sw{flex-direction:row!important;align-items:center;gap:6px;color:var(--fg)!important;cursor:pointer;font-size:13px}
-  .sw input{display:none}
-  .sw .track{width:34px;height:18px;background:#2a3a4a;border-radius:10px;position:relative;transition:.2s;display:inline-block}
-  .sw .track::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;background:#8aa0b3;border-radius:50%;transition:.2s}
-  .sw input:checked + .track{background:#4ce0a0}
-  .sw input:checked + .track::after{transform:translateX(16px);background:#04121f}
-  .seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
-  .seg button{border:0;border-radius:0;background:var(--bg);color:var(--mut);padding:6px 10px;font-size:12px;cursor:pointer}
+
+  /* ---- barra superior ---- */
+  #top{height:56px;background:var(--navy);color:#fff;display:flex;align-items:center;gap:14px;padding:0 16px;position:relative;z-index:20}
+  #top h1{font-size:17px;font-weight:650;margin:0;letter-spacing:.2px;white-space:nowrap}
+  #top h1 small{font-weight:400;opacity:.65;font-size:12px;margin-left:6px}
+  #stats{font-size:12.5px;opacity:.8;white-space:nowrap}
+  #vista{display:inline-flex;background:rgba(255,255,255,.1);border-radius:8px;padding:3px;margin-left:auto}
+  #vista button{border:0;background:transparent;color:#fff;opacity:.75;padding:6px 14px;border-radius:6px;font-weight:600;font-size:13px}
+  #vista button.on{background:#fff;color:var(--navy);opacity:1}
+  .tb{border:1px solid rgba(255,255,255,.22);background:transparent;color:#fff;border-radius:8px;padding:6px 11px;font-size:13px;white-space:nowrap}
+  .tb:hover{background:rgba(255,255,255,.12)}
+  #btnFiltros{display:none}
+
+  /* ---- cuerpo: panel filtros + contenido ---- */
+  #cuerpo{display:flex;height:calc(100% - 56px);overflow:hidden}
+  #filtros{width:290px;flex:none;background:var(--panel);border-right:1px solid var(--line);overflow-y:auto;overflow-x:hidden;padding:14px 16px 24px}
+  #filtros h4{margin:14px 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--mut)}
+  #filtros h4:first-child{margin-top:0}
+  #filtros label{display:block;font-size:12px;color:var(--mut);margin-bottom:8px}
+  #filtros label span.t{display:block;margin-bottom:3px}
+  #filtros input,#filtros select{width:100%;border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:13px;background:#fff;color:var(--fg)}
+  #filtros input:focus,#filtros select:focus{outline:2px solid var(--acc-soft);border-color:var(--acc)}
+  .fila2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .fila2 input{min-width:0}
+  .seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:8px}
+  .seg button{flex:1;border:0;background:#fff;color:var(--mut);padding:7px 4px;font-size:12.5px}
   .seg button+button{border-left:1px solid var(--line)}
-  .seg button.on{background:#4ce0a0;color:#04121f;font-weight:600}
-  .ayuda{background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:6px;
-    padding:6px 10px;cursor:pointer;font-size:13px;font-weight:400}
-  .ayuda:hover{border-color:var(--acc);color:var(--acc)}
-  .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;z-index:1000;
-    padding:40px 16px;overflow:auto}
+  .seg button.on{background:var(--acc);color:#fff;font-weight:600}
+  .sw{display:flex!important;align-items:center;gap:8px;color:var(--fg)!important;cursor:pointer;font-size:13px!important;padding:3px 0}
+  .sw input{display:none}
+  .sw .track{width:32px;height:18px;background:#cfd6df;border-radius:10px;position:relative;transition:.2s;flex:none}
+  .sw .track::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 1px 2px rgba(0,0,0,.3)}
+  .sw input:checked + .track{background:var(--ok)}
+  .sw input:checked + .track::after{transform:translateX(14px)}
+  #limpiar{width:100%;margin-top:14px;border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px;color:var(--mut)}
+  #limpiar:hover{color:var(--fg);border-color:#b9c3cf}
+
+  #main{flex:1;position:relative;min-width:0}
+  .vista{position:absolute;inset:0;display:none}
+  .vista.on{display:block}
+
+  /* ---- tabla ---- */
+  #vTabla{overflow:auto;padding:14px}
+  table{border-collapse:separate;border-spacing:0;width:100%;font-size:13px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden}
+  th,td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap;vertical-align:top}
+  th{position:sticky;top:0;background:#f8fafc;color:var(--mut);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;cursor:pointer;user-select:none;z-index:2}
+  th.num,td.num{text-align:right}
+  th.on{color:var(--acc)}
+  th .dir{font-size:9px;margin-left:3px}
+  tbody tr{cursor:pointer}
+  tbody tr:hover td{background:#f5f8fc}
+  tbody tr.sel td{background:var(--acc-soft)}
+  tbody tr:last-child td{border-bottom:0}
+  td.desc{white-space:normal;min-width:260px;color:#3b4756}
+  td.desc span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  td.loc b{display:block;font-weight:600}
+  td.loc small{color:var(--mut)}
+  td.precio{font-weight:700;font-size:14px}
+  td.precio small{display:block;font-weight:400;font-size:11px;color:var(--mut)}
+  td.fil:hover{text-decoration:underline;color:var(--acc)}
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;background:#eef1f5;color:#3b4756}
+  .pill.vivienda{background:#e8f0fe;color:#1a56c4}
+  .pill.solar{background:#fff3df;color:#9a5b00}
+  .pill.finca_rustica{background:#e3f6ee;color:#0b7a52}
+  .tag{display:inline-block;padding:1px 7px;border-radius:6px;font-size:11px;font-weight:600}
+  .tag.ok{background:var(--ok-soft);color:var(--ok)}
+  .tag.warn{background:var(--warn-soft);color:var(--warn)}
+  .tag.bad{background:var(--bad-soft);color:var(--bad)}
+  .tag.mut{background:#eef1f5;color:var(--mut)}
+  .vacio{padding:60px 20px;text-align:center;color:var(--mut)}
+
+  /* ---- mapa ---- */
+  #mapa{position:absolute;inset:0}
+  .leaflet-container{font:inherit}
+  .leaflet-popup-content-wrapper{border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.25);padding:0}
+  .leaflet-popup-content{margin:0;width:300px!important}
+  .pop{padding:14px 16px 12px}
+  .pop .hd{display:flex;align-items:baseline;gap:8px;margin-bottom:2px}
+  .pop .precio{font-size:20px;font-weight:750;color:var(--navy)}
+  .pop .sub{font-size:12px;color:var(--mut);margin-bottom:10px}
+  .pop .grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;font-size:12.5px;margin-bottom:10px}
+  .pop .grid div small{display:block;color:var(--mut);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px}
+  .pop .grid div b{font-weight:600}
+  .pop .txt{font-size:12px;color:#3b4756;line-height:1.4;margin-bottom:10px;max-height:64px;overflow:hidden}
+  .pop .acc{display:flex;gap:8px}
+  .pop .acc a,.pop .acc button{flex:1;text-align:center;border-radius:8px;padding:7px 8px;font-size:12.5px;font-weight:600;border:1px solid var(--line);background:#fff;color:var(--fg)}
+  .pop .acc a.pri{background:var(--acc);border-color:var(--acc);color:#fff}
+  .pop .aviso{font-size:11px;color:var(--warn);background:var(--warn-soft);border-radius:6px;padding:4px 8px;margin-bottom:8px}
+  .leyenda{background:#fff;border-radius:8px;padding:8px 10px;font-size:11.5px;box-shadow:var(--sh);line-height:1.7}
+  .leyenda i{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+  .mk{border-radius:50%;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+  .mk.aprox{border:2px dashed #fff;opacity:.8}
+  .ctl{background:#fff;border:0;border-radius:8px;padding:7px 10px;font-size:12.5px;font-weight:600;box-shadow:var(--sh);color:var(--fg)}
+  .marker-cluster-small{background:rgba(31,111,235,.25)} .marker-cluster-small div{background:rgba(31,111,235,.85);color:#fff}
+  .marker-cluster-medium{background:rgba(31,111,235,.25)} .marker-cluster-medium div{background:rgba(31,111,235,.85);color:#fff}
+  .marker-cluster-large{background:rgba(19,34,56,.25)} .marker-cluster-large div{background:rgba(19,34,56,.85);color:#fff}
+
+  /* ---- panel de detalle ---- */
+  #detalle{position:absolute;top:0;right:0;bottom:0;width:420px;max-width:100%;background:var(--panel);border-left:1px solid var(--line);box-shadow:-8px 0 24px rgba(0,0,0,.08);transform:translateX(105%);transition:transform .22s;z-index:900;overflow-y:auto;padding:18px 20px 30px}
+  #detalle.on{transform:none}
+  #detalle .x{position:absolute;top:12px;right:12px;border:1px solid var(--line);background:#fff;border-radius:8px;width:30px;height:30px}
+  #detalle .precio{font-size:26px;font-weight:750;color:var(--navy);margin:6px 0 0}
+  #detalle .sub{color:var(--mut);font-size:13px;margin-bottom:12px}
+  #detalle h5{margin:16px 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--mut)}
+  .kv{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;font-size:13px}
+  .kv div small{display:block;color:var(--mut);font-size:11px}
+  .kv div b{font-weight:600}
+  #detalle p.txt{font-size:13px;line-height:1.5;color:#3b4756;white-space:pre-wrap}
+  .btns{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+  .btns a,.btns button{border-radius:8px;padding:9px 12px;font-size:13px;font-weight:600;border:1px solid var(--line);background:#fff;color:var(--fg);flex:1;text-align:center}
+  .btns .pri{background:var(--acc);border-color:var(--acc);color:#fff}
+
+  /* ---- modales ---- */
+  .modal{position:fixed;inset:0;background:rgba(10,18,30,.55);display:none;z-index:1000;padding:40px 16px;overflow:auto}
   .modal.on{display:block}
-  .modal .box{max-width:820px;margin:0 auto;background:var(--panel);border:1px solid var(--line);
-    border-radius:10px;padding:24px 28px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+  .modal .box{max-width:820px;margin:0 auto;background:var(--panel);border-radius:14px;padding:24px 28px;box-shadow:0 20px 60px rgba(0,0,0,.35)}
   .modal h2{margin:0 0 4px;font-size:20px}
-  .modal .x{float:right;background:var(--bg);border:1px solid var(--line);color:var(--fg);
-    border-radius:6px;width:30px;height:30px;cursor:pointer;font-size:16px}
+  .modal .x{float:right;background:#fff;border:1px solid var(--line);border-radius:8px;width:30px;height:30px;font-size:16px}
   .modal h3{color:var(--acc);margin:22px 0 8px;font-size:15px;border-bottom:1px solid var(--line);padding-bottom:4px}
-  .modal p,.modal li{color:var(--fg);line-height:1.55}
-  .modal .term{margin:0 0 9px;padding-left:0}
-  .modal .term b{color:#ffd479}
-  .modal .warn{background:#3a2416;border:1px solid #6b4522;border-radius:6px;padding:10px 12px;margin:10px 0}
-  .modal .ok{background:#16321f;border:1px solid #2c6b45;border-radius:6px;padding:10px 12px;margin:10px 0}
-  .modal .buscar{width:100%;margin:8px 0 4px;padding:8px 10px}
+  .modal p,.modal li{line-height:1.55}
+  .modal .term{margin:0 0 9px}
+  .modal .term b{color:var(--navy)}
+  .modal .warn{background:var(--warn-soft);border:1px solid #f3d9a4;border-radius:8px;padding:10px 12px;margin:10px 0}
+  .modal .ok{background:var(--ok-soft);border:1px solid #b5e5cf;border-radius:8px;padding:10px 12px;margin:10px 0}
+  .modal .buscar{width:100%;margin:8px 0 4px;padding:8px 10px;border:1px solid var(--line);border-radius:8px}
   .modal .oculto{display:none}
-  .modal table{width:100%;border-collapse:collapse;margin:8px 0;font-size:13px}
-  .modal td,.modal th{border:1px solid var(--line);padding:6px 8px;text-align:left;white-space:normal}
+  .modal table{width:100%;border-collapse:collapse;margin:8px 0;font-size:13px;box-shadow:none;border-radius:0}
+  .modal td,.modal th{border:1px solid var(--line);padding:6px 8px;text-align:left;white-space:normal;position:static;text-transform:none;letter-spacing:0}
+
+  @media (max-width:900px){
+    #top{gap:8px;padding:0 10px}
+    #top h1 small,#stats,.tb.opc{display:none}
+    #btnFiltros{display:inline-block}
+    #filtros{position:absolute;z-index:30;top:0;bottom:0;left:0;transform:translateX(-105%);transition:transform .2s;width:min(320px,90vw)}
+    #filtros.on{transform:none;box-shadow:8px 0 24px rgba(0,0,0,.15)}
+    #cuerpo{position:relative}
+    #vTabla{padding:8px}
+    #detalle{width:100%}
+  }
 </style>
 </head>
 <body>
-<header>
-  <h1>Subastas BOE</h1>
-  <span class="mut" id="stats"></span>
-  <span style="margin-left:auto;display:flex;gap:8px">
-    <button class="ayuda" onclick="abrirModal('mGloss')">📖 Glosario</button>
-    <button class="ayuda" onclick="abrirModal('mGuia')">❓ Cómo funciona</button>
-  </span>
-</header>
+<div id="top">
+  <button class="tb" id="btnFiltros" onclick="document.getElementById('filtros').classList.toggle('on')">☰ Filtros</button>
+  <h1>Subastas BOE<small>viviendas · solares · fincas rústicas</small></h1>
+  <span id="stats"></span>
+  <div id="vista">
+    <button data-v="tabla" class="on">☰ Tabla</button><button data-v="mapa">◎ Mapa</button>
+  </div>
+  <button class="tb opc" onclick="abrirModal('mGloss')">Glosario</button>
+  <button class="tb opc" onclick="abrirModal('mGuia')">Cómo funciona</button>
+  <button class="tb" id="dl" title="Descarga la selección filtrada en CSV">⤓ CSV</button>
+</div>
+
+<div id="cuerpo">
+  <aside id="filtros">
+    <h4>Buscar</h4>
+    <label><input id="q" placeholder="localidad, dirección, descripción…"></label>
+    <h4>Precio y tipo</h4>
+    <label><span class="t">Precio máximo (€)</span><input id="pmax" type="number" step="5000" value="60000"></label>
+    <label><span class="t">Subtipo</span><select id="sub"><option value="">Todos</option></select></label>
+    <span class="t mut" style="font-size:12px;display:block;margin-bottom:3px">Clase</span>
+    <div class="seg" id="claseSeg">
+      <button type="button" data-v="" class="on">Todas</button><button type="button" data-v="urbano">Urbano</button><button type="button" data-v="rural">Rural</button>
+    </div>
+    <h4>Dónde</h4>
+    <label><span class="t">Comunidad autónoma</span><select id="ccaa"><option value="">Todas</option></select></label>
+    <label><span class="t">Provincia</span><select id="prov"><option value="">Todas</option></select></label>
+    <label><span class="t">Localidad</span><input id="loc" list="locs" placeholder="Todas"><datalist id="locs"></datalist></label>
+    <label class="sw"><input id="solomar" type="checkbox"><span class="track"></span> A menos de 500 m del mar</label>
+    <label class="sw"><input id="soloc" type="checkbox"><span class="track"></span> Solo ubicación exacta</label>
+    <h4>Pujas y plazos</h4>
+    <label class="sw"><input id="sinpuj" type="checkbox"><span class="track"></span> Sin pujas todavía</label>
+    <label><span class="t">Cierra en menos de (horas)</span><input id="hmax" type="number" step="1" placeholder="ej: 24"></label>
+    <div class="fila2">
+      <label><span class="t">Cierra desde</span><input id="fdesde" type="date"></label>
+      <label><span class="t">Cierra hasta</span><input id="fhasta" type="date"></label>
+    </div>
+    <h4>Orden</h4>
+    <label><select id="orden">
+      <option value="fecha_fin|1">Cierre (próximo primero)</option>
+      <option value="horas_rest|1">Horas para cerrar</option>
+      <option value="fecha_inicio|-1">Publicación (reciente primero)</option>
+      <option value="precio_ref|1">Precio (barato primero)</option>
+      <option value="eur_m2|1">€/m² (barato primero)</option>
+      <option value="dist_costa_m|1">Distancia al mar</option>
+    </select></label>
+    <button id="limpiar">Limpiar filtros</button>
+  </aside>
+
+  <div id="main">
+    <div class="vista on" id="vTabla"></div>
+    <div class="vista" id="vMapa"><div id="mapa"></div></div>
+    <div id="detalle"></div>
+  </div>
+</div>
+
 <div class="modal" id="mGloss" onclick="if(event.target===this)cerrarModal('mGloss')">
   <div class="box">
     <button class="x" onclick="cerrarModal('mGloss')">✕</button>
-    <h2>📖 Glosario de subastas</h2>
-    <p class="mut">La jerga del mundillo, en cristiano. Busca un término:</p>
-    <input class="buscar" id="glossQ" placeholder="escribe para filtrar: depósito, cargas, cesión de remate...">
+    <h2>Glosario de subastas</h2>
+    <p class="mut">Busca un término:</p>
+    <input class="buscar" id="glossQ" placeholder="depósito, cargas, cesión de remate…">
     <div id="glossList">/*GLOSARIO*/</div>
   </div>
 </div>
 <div class="modal" id="mGuia" onclick="if(event.target===this)cerrarModal('mGuia')">
   <div class="box">
     <button class="x" onclick="cerrarModal('mGuia')">✕</button>
-    <h2>❓ Cómo funciona una subasta</h2>
+    <h2>Cómo funciona una subasta</h2>
     <p class="mut">Requisitos, pasos, dinero necesario y preguntas frecuentes.</p>
     /*GUIA*/
   </div>
 </div>
-<div id="filtros">
-  <label>Texto<input id="q" placeholder="localidad, descripcion..."></label>
-  <label>Precio max (EUR)<input id="pmax" type="number" step="1000" value="60000"></label>
-  <label>Subtipo<select id="sub"><option value="">todos</option></select></label>
-  <label>Clase<span class="seg" id="claseSeg">
-    <button type="button" data-v="" class="on">Todas</button><button type="button" data-v="urbano">Urbano</button><button type="button" data-v="rural">Rural</button>
-  </span></label>
-  <label>CCAA<select id="ccaa"><option value="">todas</option></select></label>
-  <label>Provincia<select id="prov"><option value="">todas</option></select></label>
-  <label>Localidad<input id="loc" list="locs" placeholder="todas"><datalist id="locs"></datalist></label>
-  <label class="sw"><input id="solomar" type="checkbox"><span class="track"></span> &lt;500 m del mar</label>
-  <label class="sw"><input id="sinpuj" type="checkbox"><span class="track"></span> sin pujas</label>
-  <label>Cierra en &lt; (h)<input id="hmax" type="number" step="1" placeholder="ej: 24" style="width:70px"></label>
-  <label>Cierra desde<input id="fdesde" type="date"></label>
-  <label>Cierra hasta<input id="fhasta" type="date"></label>
-  <label>Ordenar por<select id="orden">
-    <option value="fecha_fin|1">Cierre (proximo primero)</option>
-    <option value="horas_rest|1">Horas para cerrar (menos primero)</option>
-    <option value="fecha_inicio|-1">Publicacion (reciente primero)</option>
-    <option value="precio_ref|1">Precio (barato primero)</option>
-    <option value="eur_m2|1">€/m² (barato primero)</option>
-    <option value="dist_costa_m|1">Distancia al mar</option>
-  </select></label>
-  <label style="flex-direction:row;align-items:center;gap:6px;color:var(--fg)">
-    <input id="soloc" type="checkbox" style="width:auto"> solo geolocalizados</label>
-  <button id="dl">Descargar CSV (Excel)</button>
-</div>
-<div id="wrap">
-  <div id="tabla"></div>
-  <div id="mapa"></div>
-</div>
+
 <script>
 const DATOS = /*DATOS*/;
-const fmt = n => n==null ? "" : n.toLocaleString("es-ES",{maximumFractionDigits:0});
-let sortKey="fecha_fin", sortDir=1, filtrados=[], claseVal="";
+const fmt = n => n==null ? "—" : String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g,".");
+const eur = n => n==null ? "—" : fmt(n)+" €";
+const esc = s => String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
+const $ = id => document.getElementById(id);
+let sortKey="fecha_fin", sortDir=1, filtrados=[], claseVal="", vistaActual="tabla", selId=null;
+const PREC = {exacta:"Ubicación exacta", municipio:"Aprox. · centro del municipio", provincia:"Aprox. · capital de provincia"};
 
-const VISTA_ESP=[[27.5,-19.0],[44.0,4.5]]; // bounds Espana (incl. Canarias)
-const map = L.map('mapa').fitBounds(VISTA_ESP);
-const satelite = L.tileLayer(
-  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-  {maxZoom:19, attribution:'© Esri, Maxar, Earthstar'}).addTo(map);
+// ---------- utilidades de presentacion ----------
+function horasTxt(hr){ if(hr==null||hr<0) return null; return hr<1 ? "<1 h" : hr<48 ? Math.round(hr)+" h" : Math.round(hr/24)+" días"; }
+function fechaTxt(iso){ if(!iso) return "—"; const [y,m,d]=iso.split("-"); return `${d}/${m}/${y}`; }
+function pujasTxt(d){ return d.num_pujas==null ? "sin datos" : d.num_pujas===0 ? "sin pujas" : d.num_pujas+(d.num_pujas>1?" pujas":" puja"); }
+function tagCierre(d){
+  const t=horasTxt(d.horas_rest); if(!t) return "";
+  const cls = d.horas_rest<=24 ? "bad" : d.horas_rest<=72 ? "warn" : "mut";
+  return `<span class="tag ${cls}">${t}</span>`;
+}
+function tagPujas(d){
+  if(d.num_pujas==null) return `<span class="tag mut">?</span>`;
+  return d.num_pujas===0 ? `<span class="tag ok">sin pujas</span>` : `<span class="tag mut">${pujasTxt(d)}</span>`;
+}
+
+// ---------- vista tabla / mapa ----------
+function setVista(v){
+  vistaActual=v;
+  document.querySelectorAll('#vista button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+  $('vTabla').classList.toggle('on',v==='tabla'); $('vMapa').classList.toggle('on',v==='mapa');
+  if(v==='mapa'){ setTimeout(()=>{ map.invalidateSize(); if(!mapaAjustado){ zoomAFiltrados(); mapaAjustado=true; } },30); }
+}
+document.querySelectorAll('#vista button').forEach(b=>b.onclick=()=>setVista(b.dataset.v));
+
+// ---------- mapa ----------
+const VISTA_ESP=[[27.5,-19.0],[44.0,4.5]];
+const map = L.map('mapa',{zoomControl:true}).fitBounds(VISTA_ESP);
+let mapaAjustado=false;
 const callejero = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-  {maxZoom:19, attribution:'© OpenStreetMap'});
-// etiquetas de calles/nombres encima del satelite
-const etiquetas = L.tileLayer(
-  'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
-  {maxZoom:19}).addTo(map);
-L.control.layers({"Satélite":satelite,"Callejero":callejero},
-  {"Etiquetas (satélite)":etiquetas},{position:'topright'}).addTo(map);
-let capa = L.layerGroup().addTo(map);
+  {maxZoom:19, attribution:'© OpenStreetMap'}).addTo(map);
+const satelite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  {maxZoom:19, attribution:'© Esri, Maxar, Earthstar'});
+const etiquetas = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',{maxZoom:19});
+L.control.layers({"Callejero":callejero,"Satélite":satelite},{"Etiquetas sobre satélite":etiquetas},{position:'topright'}).addTo(map);
+const cluster = L.markerClusterGroup({maxClusterRadius:45, spiderfyOnMaxZoom:true, showCoverageOnHover:false, disableClusteringAtZoom:15});
+map.addLayer(cluster);
 let markers = {};
 
-// boton "Vista general" para volver a ver toda Espana
 const Home = L.Control.extend({options:{position:'topleft'},
-  onAdd:function(){
-    const b=L.DomUtil.create('button','','');
-    b.innerHTML='🏠 Vista general';
-    b.style.cssText='background:#182430;color:#e6edf3;border:1px solid #2a3a4a;'
-      +'border-radius:6px;padding:6px 8px;cursor:pointer;font-size:12px';
-    L.DomEvent.disableClickPropagation(b);
-    b.onclick=()=>{ if(!zoomAFiltrados()) map.fitBounds(VISTA_ESP); };
-    return b;}});
+  onAdd:function(){ const b=L.DomUtil.create('button','ctl'); b.textContent='Ver todos';
+    L.DomEvent.disableClickPropagation(b); b.onclick=()=>{ if(!zoomAFiltrados()) map.fitBounds(VISTA_ESP); }; return b;}});
 map.addControl(new Home());
+const Ley = L.Control.extend({options:{position:'bottomleft'},
+  onAdd:function(){ const d=L.DomUtil.create('div','leyenda');
+    d.innerHTML='<i style="background:#1f6feb"></i>Lote<br><i style="background:#0f9d6b"></i>A &lt;500 m del mar<br><i style="background:#1f6feb;border:2px dashed #fff;opacity:.8;box-shadow:0 0 0 1px #1f6feb"></i>Ubicación aproximada';
+    return d;}});
+map.addControl(new Ley());
 
 function zoomAFiltrados(){
   const pts=filtrados.filter(d=>d.lat).map(d=>[d.lat,d.lon]);
   if(pts.length){ map.fitBounds(pts,{padding:[40,40],maxZoom:13}); return true; }
   return false;
 }
+function icono(d){
+  const cerca=d.dist_costa_m!=null&&d.dist_costa_m<=500;
+  const aprox=d.precision&&d.precision!=='exacta';
+  const col=cerca?'#0f9d6b':'#1f6feb';
+  return L.divIcon({className:'', iconSize:[16,16], iconAnchor:[8,8],
+    html:`<div class="mk ${aprox?'aprox':''}" style="width:16px;height:16px;background:${col}"></div>`});
+}
+function popupHtml(d){
+  const aprox=d.precision&&d.precision!=='exacta';
+  return `<div class="pop">
+    <div class="hd"><span class="precio">${eur(d.precio_ref)}</span><span class="pill ${d.subtipo}">${esc(d.subtipo)}</span></div>
+    <div class="sub">${esc(d.localidad||"")}${d.barrio?" · "+esc(d.barrio):""} · ${esc(d.provincia||"")}</div>
+    ${aprox?`<div class="aviso">${PREC[d.precision]}. La ficha del BOE indica la dirección real.</div>`:""}
+    <div class="grid">
+      <div><small>Superficie</small><b>${d.superficie_m2?fmt(d.superficie_m2)+" m²":"—"}</b></div>
+      <div><small>€/m²</small><b>${d.eur_m2?fmt(d.eur_m2):"—"}</b></div>
+      <div><small>Al mar</small><b>${d.dist_costa_m!=null?fmt(d.dist_costa_m)+" m":"—"}</b></div>
+      <div><small>Cierra</small><b>${fechaTxt(d.fecha_fin)} ${tagCierre(d)}</b></div>
+      <div><small>Pujas</small><b>${pujasTxt(d)}</b></div>
+      <div><small>Depósito</small><b>${eur(d.deposito)}</b></div>
+    </div>
+    <div class="txt">${esc((d.descripcion||"").slice(0,160))}${(d.descripcion||"").length>160?"…":""}</div>
+    <div class="acc"><button onclick="abrirDetalle('${d.id_sub}')">Detalle</button><a class="pri" href="${esc(d.url)}" target="_blank">Ficha BOE ↗</a></div>
+  </div>`;
+}
+function pintarMapa(){
+  cluster.clearLayers(); markers={};
+  filtrados.filter(d=>d.lat).forEach(d=>{
+    const m=L.marker([d.lat,d.lon],{icon:icono(d)}).bindPopup(popupHtml(d),{maxWidth:320});
+    m.on('click',()=>marcarFila(d.id_sub,false));
+    markers[d.id_sub]=m; cluster.addLayer(m);
+  });
+}
+function verEnMapa(id){
+  const d=DATOS.find(x=>x.id_sub===id); if(!d||!d.lat) return;
+  setVista('mapa'); cerrarDetalle();
+  setTimeout(()=>{ map.flyTo([d.lat,d.lon], d.precision==='exacta'?17:13, {duration:.9});
+    const m=markers[id]; if(m) setTimeout(()=>{ cluster.zoomToShowLayer(m,()=>m.openPopup()); },950); },60);
+}
 
-function unicos(k){return [...new Set(DATOS.map(d=>d[k]).filter(Boolean))].sort();}
+// ---------- panel de detalle ----------
+function abrirDetalle(id){
+  const d=DATOS.find(x=>x.id_sub===id); if(!d) return;
+  marcarFila(id,false);
+  const p=$('detalle'); const aprox=d.precision&&d.precision!=='exacta';
+  p.innerHTML=`<button class="x" onclick="cerrarDetalle()">✕</button>
+    <span class="pill ${d.subtipo}">${esc(d.subtipo)}</span> <span class="tag mut">${esc(d.clase)}</span>
+    <div class="precio">${eur(d.precio_ref)}</div>
+    <div class="sub">${esc(d.direccion||"")}<br>${esc(d.localidad||"")}${d.barrio?" · "+esc(d.barrio):""} · ${esc(d.provincia||"")} · ${esc(d.ccaa||"")}</div>
+    ${tagCierre(d)} ${tagPujas(d)}
+    <h5>Importes</h5>
+    <div class="kv">
+      <div><small>Postura mínima</small><b>${eur(d.postura_minima)}</b></div>
+      <div><small>Valor de subasta</small><b>${eur(d.valor_subasta)}</b></div>
+      <div><small>Depósito para pujar</small><b>${eur(d.deposito)}</b></div>
+      <div><small>Cantidad reclamada</small><b>${eur(d.cantidad_reclamada)}</b></div>
+      <div><small>Puja máxima actual</small><b>${eur(d.puja_maxima)}</b></div>
+      <div><small>Pujas</small><b>${pujasTxt(d)}</b></div>
+    </div>
+    <h5>Inmueble</h5>
+    <div class="kv">
+      <div><small>Superficie</small><b>${d.superficie_m2?fmt(d.superficie_m2)+" m²":"—"}</b></div>
+      <div><small>€/m²</small><b>${d.eur_m2?fmt(d.eur_m2)+" €/m²":"—"}</b></div>
+      <div><small>Distancia al mar</small><b>${d.dist_costa_m!=null?fmt(d.dist_costa_m)+" m":"—"}</b></div>
+      <div><small>Ubicación</small><b>${d.lat?PREC[d.precision]||"—":"sin geolocalizar"}</b></div>
+    </div>
+    <h5>Plazos</h5>
+    <div class="kv">
+      <div><small>Publicación</small><b>${fechaTxt(d.fecha_inicio)}</b></div>
+      <div><small>Cierre</small><b>${fechaTxt(d.fecha_fin)}${d.fecha_fin_dt?" "+d.fecha_fin_dt.slice(11):""}</b></div>
+    </div>
+    <h5>Descripción registral</h5>
+    <p class="txt">${esc(d.descripcion||"")}</p>
+    <div class="btns">
+      ${d.lat?`<button onclick="verEnMapa('${d.id_sub}')">Ver en el mapa</button>`:""}
+      ${d.anuncio_boe?`<a href="${esc(d.anuncio_boe)}" target="_blank">Anuncio BOE</a>`:""}
+      <a class="pri" href="${esc(d.url)}" target="_blank">Ficha en subastas.boe.es ↗</a>
+    </div>
+    <p class="mut" style="font-size:11px;margin-top:14px">Id ${esc(d.id_sub)}. Comprueba siempre cargas, posesión, tramos y fechas en la ficha oficial.</p>`;
+  p.classList.add('on');
+}
+function cerrarDetalle(){ $('detalle').classList.remove('on'); }
+function marcarFila(id,scroll){
+  selId=id;
+  document.querySelectorAll('#vTabla tr[data-id]').forEach(r=>{ const on=r.dataset.id===id; r.classList.toggle('sel',on); if(on&&scroll) r.scrollIntoView({block:'center'}); });
+}
+
+// ---------- filtros ----------
+function unicos(k){return [...new Set(DATOS.map(d=>d[k]).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));}
 function llenar(sel,vals){vals.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o);});}
-llenar(document.getElementById('sub'), unicos('subtipo'));
-llenar(document.getElementById('ccaa'), unicos('ccaa'));
-llenar(document.getElementById('prov'), unicos('provincia'));
-llenar(document.getElementById('locs'), unicos('localidad'));
-
-// Provincias de cada CCAA, para encadenar el desplegable de provincia.
+llenar($('sub'), unicos('subtipo')); llenar($('ccaa'), unicos('ccaa')); llenar($('prov'), unicos('provincia')); llenar($('locs'), unicos('localidad'));
 const PROV_DE_CCAA={};
 DATOS.forEach(d=>{ if(d.ccaa&&d.provincia){(PROV_DE_CCAA[d.ccaa]=PROV_DE_CCAA[d.ccaa]||new Set()).add(d.provincia);} });
 function refrescarProv(){
-  const c=document.getElementById('ccaa').value;
-  const sel=document.getElementById('prov'), prev=sel.value;
+  const c=$('ccaa').value, sel=$('prov'), prev=sel.value;
   const vals = c ? [...(PROV_DE_CCAA[c]||[])].sort() : unicos('provincia');
-  sel.innerHTML='<option value="">todas</option>';
-  llenar(sel, vals);
-  sel.value = vals.includes(prev) ? prev : "";
+  sel.innerHTML='<option value="">Todas</option>'; llenar(sel, vals); sel.value = vals.includes(prev) ? prev : "";
 }
-document.getElementById('ccaa').addEventListener('change',()=>{refrescarProv();aplica();});
+$('ccaa').addEventListener('change',()=>{refrescarProv();aplica();});
 
 function aplica(){
-  const q=document.getElementById('q').value.toLowerCase();
-  const pmax=parseFloat(document.getElementById('pmax').value)||Infinity;
-  const sub=document.getElementById('sub').value;
-  const clase=claseVal;
-  const ccaa=document.getElementById('ccaa').value;
-  const prov=document.getElementById('prov').value;
-  const loc=document.getElementById('loc').value.trim().toLowerCase();
-  const solomar=document.getElementById('solomar').checked;
-  const sinpuj=document.getElementById('sinpuj').checked;
-  const hmax=parseFloat(document.getElementById('hmax').value);
-  const fdesde=document.getElementById('fdesde').value;
-  const fhasta=document.getElementById('fhasta').value;
-  const soloc=document.getElementById('soloc').checked;
+  const q=$('q').value.toLowerCase().trim(), pmax=parseFloat($('pmax').value)||Infinity;
+  const sub=$('sub').value, ccaa=$('ccaa').value, prov=$('prov').value, loc=$('loc').value.trim().toLowerCase();
+  const solomar=$('solomar').checked, sinpuj=$('sinpuj').checked, soloc=$('soloc').checked;
+  const hmax=parseFloat($('hmax').value), fdesde=$('fdesde').value, fhasta=$('fhasta').value;
   const ahora=Date.now();
   DATOS.forEach(d=>{ d.horas_rest = d.fecha_fin_dt ? (new Date(d.fecha_fin_dt)-ahora)/3.6e6 : null; });
   filtrados = DATOS.filter(d=>{
     if(d.precio_ref==null || d.precio_ref>pmax) return false;
     if(sub && d.subtipo!==sub) return false;
-    if(clase && d.clase!==clase) return false;
+    if(claseVal && d.clase!==claseVal) return false;
     if(ccaa && d.ccaa!==ccaa) return false;
     if(prov && d.provincia!==prov) return false;
     if(loc && !((d.localidad||"").toLowerCase().includes(loc))) return false;
     if(solomar && (d.dist_costa_m==null || d.dist_costa_m>500)) return false;
     if(sinpuj && !d.sin_pujas) return false;
+    if(soloc && d.precision!=='exacta') return false;
     if(!isNaN(hmax) && (d.horas_rest==null || d.horas_rest<0 || d.horas_rest>hmax)) return false;
     if(fdesde && (!d.fecha_fin || d.fecha_fin<fdesde)) return false;
     if(fhasta && (!d.fecha_fin || d.fecha_fin>fhasta)) return false;
-    if(soloc && d.lat==null) return false;
-    if(q){const t=((d.descripcion||"")+" "+(d.localidad||"")+" "+(d.direccion||"")).toLowerCase();
-      if(!t.includes(q)) return false;}
+    if(q){const t=((d.descripcion||"")+" "+(d.localidad||"")+" "+(d.direccion||"")+" "+(d.provincia||"")).toLowerCase(); if(!t.includes(q)) return false;}
     return true;
   });
-  filtrados.sort((a,b)=>{const x=a[sortKey],y=b[sortKey];
-    if(x==null)return 1; if(y==null)return -1; return (x>y?1:x<y?-1:0)*sortDir;});
+  filtrados.sort((a,b)=>{const x=a[sortKey],y=b[sortKey]; if(x==null)return 1; if(y==null)return -1; return (x>y?1:x<y?-1:0)*sortDir;});
   render();
 }
 
 function render(){
-  const cols=[["precio_ref","Precio"],["subtipo","Tipo"],
-    ["superficie_m2","m²"],["eur_m2","€/m²"],
-    ["dist_costa_m","m mar"],["localidad","Localidad"],["provincia","Provincia"],
-    ["descripcion","Descripcion"],["fecha_fin","Cierre"],["horas_rest","Cierra en"],
-    ["num_pujas","Pujas"]];
+  const cols=[["precio_ref","Precio","num"],["subtipo","Tipo",""],["superficie_m2","m²","num"],["eur_m2","€/m²","num"],
+    ["dist_costa_m","Al mar","num"],["localidad","Localidad",""],["descripcion","Descripción",""],
+    ["fecha_fin","Cierre",""],["num_pujas","Pujas",""]];
   let h="<table><thead><tr>";
-  cols.forEach(c=>h+=`<th data-k="${c[0]}">${c[1]}</th>`);
-  h+="<th>BOE</th></tr></thead><tbody>";
-  filtrados.forEach((d,i)=>{
+  cols.forEach(c=>h+=`<th class="${c[2]} ${sortKey===c[0]?'on':''}" data-k="${c[0]}">${c[1]}${sortKey===c[0]?`<span class="dir">${sortDir>0?'▲':'▼'}</span>`:''}</th>`);
+  h+="<th></th></tr></thead><tbody>";
+  filtrados.forEach(d=>{
     const cerca = d.dist_costa_m!=null && d.dist_costa_m<=500;
-    const hr=d.horas_rest;
-    const opp = d.sin_pujas && hr!=null && hr>=0 && hr<=24;
-    let hrTxt="", hrCls="";
-    if(hr!=null && hr>=0){
-      hrTxt = hr<24 ? Math.round(hr)+" h" : Math.round(hr/24)+" d";
-      hrCls = hr<=24 ? "urge" : "";
-    }
-    const pjTxt = d.num_pujas==null ? "?" : (d.num_pujas===0 ? "sin pujas" : d.num_pujas+" puja"+(d.num_pujas>1?"s":""));
-    const pjCls = d.sin_pujas ? "nopuja" : "";
-    h+=`<tr data-i="${i}" class="${opp?'oportunidad':''}">`+
-      `<td>${fmt(d.precio_ref)} €</td>`+
-      `<td class="fil" data-f="sub" data-v="${d.subtipo||''}"><span class="pill">${d.subtipo||""}</span></td>`+
-      `<td>${fmt(d.superficie_m2)}</td><td>${fmt(d.eur_m2)}</td>`+
-      `<td class="${cerca?'cerca':''}">${d.dist_costa_m==null?"":fmt(d.dist_costa_m)}</td>`+
-      `<td class="fil" data-f="loc" data-v="${(d.localidad||'').replace(/"/g,'')}">${d.localidad||""}</td>`+
-      `<td class="fil" data-f="prov" data-v="${(d.provincia||'').replace(/"/g,'')}">${d.provincia||""}</td>`+
-      `<td class="desc">${(d.descripcion||"").slice(0,240)}</td>`+
-      `<td>${d.fecha_fin||""}</td>`+
-      `<td class="${hrCls}">${hrTxt}</td>`+
-      `<td class="${pjCls}">${pjTxt}</td>`+
-      `<td><a href="${d.url}" target="_blank">ver</a></td></tr>`;
+    h+=`<tr data-id="${d.id_sub}" class="${selId===d.id_sub?'sel':''}">`+
+      `<td class="precio num">${eur(d.precio_ref)}${d.deposito?`<small>dep. ${eur(d.deposito)}</small>`:""}</td>`+
+      `<td class="fil" data-f="sub" data-v="${esc(d.subtipo)}"><span class="pill ${d.subtipo}">${esc(d.subtipo)}</span></td>`+
+      `<td class="num">${d.superficie_m2?fmt(d.superficie_m2):""}</td><td class="num">${d.eur_m2?fmt(d.eur_m2):""}</td>`+
+      `<td class="num">${d.dist_costa_m==null?"":cerca?`<span class="tag ok">${fmt(d.dist_costa_m)} m</span>`:fmt(d.dist_costa_m)+" m"}</td>`+
+      `<td class="loc"><b class="fil" data-f="loc" data-v="${esc(d.localidad)}">${esc(d.localidad||"")}</b><small class="fil" data-f="prov" data-v="${esc(d.provincia)}">${esc(d.provincia||"")}</small></td>`+
+      `<td class="desc"><span title="${esc(d.descripcion)}">${esc(d.descripcion||"")}</span></td>`+
+      `<td>${fechaTxt(d.fecha_fin)}<br>${tagCierre(d)}</td>`+
+      `<td>${tagPujas(d)}</td>`+
+      `<td><a href="${esc(d.url)}" target="_blank" onclick="event.stopPropagation()">BOE ↗</a></td></tr>`;
   });
   h+="</tbody></table>";
-  document.getElementById('tabla').innerHTML=h;
-  document.getElementById('stats').textContent=
-    `${filtrados.length} de ${DATOS.length} lotes · ${filtrados.filter(d=>d.dist_costa_m<=500).length} a <500 m del mar`;
-  document.querySelectorAll('th[data-k]').forEach(th=>th.onclick=()=>{
-    const k=th.dataset.k; sortDir = (k===sortKey)? -sortDir : 1; sortKey=k; aplica();});
-  function irAlPunto(tr, volar){
-    const d=filtrados[tr.dataset.i];
-    document.querySelectorAll('#tabla tr').forEach(r=>r.classList.remove('sel'));
-    tr.classList.add('sel');
-    if(d.lat){
-      const m=markers[d.id_sub];
-      if(volar){ map.flyTo([d.lat,d.lon],17,{duration:1.1}); }
-      else { map.setView([d.lat,d.lon],15); }
-      if(m) setTimeout(()=>m.openPopup(), volar?900:0);
-    }
-  }
-  document.querySelectorAll('#tabla tr[data-i]').forEach(tr=>{
-    tr.onclick=()=>irAlPunto(tr,false);
-    tr.oncontextmenu=(e)=>{e.preventDefault(); irAlPunto(tr,true);};
-  });
-  document.querySelectorAll('#tabla td.fil').forEach(td=>td.onclick=(e)=>{
-    e.stopPropagation();
-    const el=document.getElementById(td.dataset.f);
-    if(el){ el.value=td.dataset.v; aplica(); }
-  });
+  if(!filtrados.length) h='<div class="vacio">Ningún lote cumple los filtros.</div>';
+  $('vTabla').innerHTML=h;
+  const conPunto=filtrados.filter(d=>d.lat).length;
+  $('stats').textContent=`${filtrados.length} de ${DATOS.length} lotes · ${filtrados.filter(d=>d.dist_costa_m<=500).length} a <500 m del mar`+(conPunto<filtrados.length?` · ${filtrados.length-conPunto} sin ubicar`:"");
+  document.querySelectorAll('th[data-k]').forEach(th=>th.onclick=()=>{ const k=th.dataset.k; sortDir=(k===sortKey)?-sortDir:1; sortKey=k; aplica();});
+  document.querySelectorAll('#vTabla tr[data-id]').forEach(tr=>{ tr.onclick=()=>abrirDetalle(tr.dataset.id); });
+  document.querySelectorAll('#vTabla .fil').forEach(td=>td.onclick=(e)=>{ e.stopPropagation(); const el=$(td.dataset.f); if(el){ el.value=td.dataset.v; aplica(); } });
   pintarMapa();
 }
 
-function pintarMapa(){
-  capa.clearLayers(); markers={};
-  filtrados.filter(d=>d.lat).forEach(d=>{
-    const cerca=d.dist_costa_m!=null&&d.dist_costa_m<=500;
-    markers[d.id_sub]=L.circleMarker([d.lat,d.lon],{radius:6,color:cerca?'#4ce0a0':'#3fb0ff',
-      fillOpacity:.9,weight:2}).addTo(capa).bindPopup(
-      `<b>${fmt(d.precio_ref)} €</b> · ${d.subtipo}<br>${d.localidad||""} (${d.provincia||""})`+
-      `<br>${d.eur_m2!=null?fmt(d.eur_m2)+" €/m²<br>":""}`+
-      `${d.dist_costa_m!=null?fmt(d.dist_costa_m)+" m del mar<br>":""}`+
-      `${(d.descripcion||"").slice(0,120)}<br><a href="${d.url}" target="_blank">Ficha BOE</a>`);
-  });
-}
-
-document.getElementById('dl').onclick=()=>{
-  const cols=["id_sub","subtipo","estado","precio_ref","valor_subasta","postura_minima",
-    "deposito","superficie_m2","eur_m2",
-    "descripcion","direccion","localidad","provincia","ccaa","dist_costa_m",
-    "lat","lon","fecha_inicio","fecha_fin","anuncio_boe","url"];
-  const esc=v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"';
-  let csv="﻿"+cols.join(";")+"\n";
-  filtrados.forEach(d=>csv+=cols.map(c=>esc(d[c])).join(";")+"\n");
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
-  a.download="subastas_filtradas.csv"; a.click();
+$('dl').onclick=()=>{
+  const cols=["id_sub","subtipo","estado","precio_ref","valor_subasta","postura_minima","deposito","superficie_m2","eur_m2",
+    "descripcion","direccion","localidad","provincia","ccaa","dist_costa_m","lat","lon","precision","fecha_inicio","fecha_fin","num_pujas","anuncio_boe","url"];
+  const e=v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"';
+  let csv="﻿"+cols.join(";")+"\n"; filtrados.forEach(d=>csv+=cols.map(c=>e(d[c])).join(";")+"\n");
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"})); a.download="subastas_filtradas.csv"; a.click();
 };
+['q','pmax','sub','prov','loc','solomar','sinpuj','hmax','fdesde','fhasta','soloc'].forEach(id=>{ $(id).addEventListener('input',aplica); $(id).addEventListener('change',aplica); });
+document.querySelectorAll('#claseSeg button').forEach(b=>b.onclick=()=>{ document.querySelectorAll('#claseSeg button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); claseVal=b.dataset.v; aplica();});
+$('orden').addEventListener('change',e=>{ const [k,dd]=e.target.value.split("|"); sortKey=k; sortDir=parseInt(dd); aplica();});
+$('limpiar').onclick=()=>{ ['q','loc','hmax','fdesde','fhasta'].forEach(id=>$(id).value=""); ['sub','ccaa','prov'].forEach(id=>$(id).value=""); $('pmax').value=60000;
+  ['solomar','sinpuj','soloc'].forEach(id=>$(id).checked=false); claseVal=""; document.querySelectorAll('#claseSeg button').forEach(x=>x.classList.toggle('on',x.dataset.v==="")); refrescarProv(); aplica(); };
 
-['q','pmax','sub','prov','loc','solomar','sinpuj','hmax','fdesde','fhasta','soloc'].forEach(id=>{
-  const el=document.getElementById(id);
-  el.addEventListener('input',aplica); el.addEventListener('change',aplica);});
-document.querySelectorAll('#claseSeg button').forEach(b=>b.onclick=()=>{
-  document.querySelectorAll('#claseSeg button').forEach(x=>x.classList.remove('on'));
-  b.classList.add('on'); claseVal=b.dataset.v; aplica();});
-document.getElementById('orden').addEventListener('change',e=>{
-  const [k,dd]=e.target.value.split("|"); sortKey=k; sortDir=parseInt(dd); aplica();});
-
-// ---- modales de ayuda (glosario / guia) ----
-function abrirModal(id){document.getElementById(id).classList.add('on');}
-function cerrarModal(id){document.getElementById(id).classList.remove('on');}
-document.addEventListener('keydown',e=>{if(e.key==='Escape')
-  document.querySelectorAll('.modal.on').forEach(m=>m.classList.remove('on'));});
-document.getElementById('glossQ').addEventListener('input',e=>{
-  const q=e.target.value.toLowerCase().trim();
-  document.querySelectorAll('#glossList .term').forEach(t=>{
-    t.classList.toggle('oculto', q && !t.textContent.toLowerCase().includes(q));});
-});
+// ---------- modales ----------
+function abrirModal(id){$(id).classList.add('on');}
+function cerrarModal(id){$(id).classList.remove('on');}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){ document.querySelectorAll('.modal.on').forEach(m=>m.classList.remove('on')); cerrarDetalle(); }});
+$('glossQ').addEventListener('input',e=>{ const q=e.target.value.toLowerCase().trim();
+  document.querySelectorAll('#glossList .term').forEach(t=>{ t.classList.toggle('oculto', q && !t.textContent.toLowerCase().includes(q));}); });
 aplica();
 </script>
 </body>
