@@ -87,9 +87,32 @@ TEMPLATE = r"""<!DOCTYPE html>
   #top{height:56px;background:var(--navy);color:#fff;display:flex;align-items:center;gap:14px;padding:0 16px;position:relative;z-index:20}
   #top h1{font-size:17px;font-weight:650;margin:0;letter-spacing:.2px;white-space:nowrap}
   #top h1 small{font-weight:400;opacity:.65;font-size:12px;margin-left:6px}
-  #stats{font-size:12.5px;opacity:.8;white-space:nowrap}
+  .est{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;letter-spacing:.2px;white-space:nowrap}
+  .est.proxima_apertura{background:#e8f0fe;color:#1a56c4}
+  .est.celebrandose{background:#e3f6ee;color:#0b7a52}
+  .est.concluida{background:#eef1f5;color:#5b6b7c}
+  .est.suspendida,.est.cancelada{background:#fff3df;color:#9a5b00}
+  .star{border:0;background:transparent;font-size:18px;line-height:1;color:#c3ccd6;padding:0 4px;cursor:pointer}
+  .star.on{color:#f5b301}
+  .star:hover{color:#f5b301}
+  #vSeg,#vAna{overflow:auto;padding:14px}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;box-shadow:var(--sh)}
+  .kpi small{display:block;color:var(--mut);font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+  .kpi b{display:block;font-size:24px;font-weight:750;color:var(--navy);margin-top:2px}
+  .kpi span{font-size:12px;color:var(--mut)}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;box-shadow:var(--sh);margin-bottom:14px}
+  .card h3{margin:0 0 10px;font-size:14px}
+  .card p.nota{font-size:12px;color:var(--mut);margin:0 0 10px}
+  .card table{box-shadow:none}
+  .bar{display:grid;grid-template-columns:150px 1fr 60px;gap:8px;align-items:center;font-size:12.5px;margin:4px 0}
+  .bar i{display:block;height:12px;border-radius:6px;background:var(--acc)}
+  .bar.w i{background:var(--warn)}
+  .bar span{text-align:right;color:var(--mut)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media (max-width:900px){.grid2{grid-template-columns:1fr}}
   #vista{display:inline-flex;background:rgba(255,255,255,.1);border-radius:8px;padding:3px;margin-left:auto}
-  #vista button{border:0;background:transparent;color:#fff;opacity:.75;padding:6px 14px;border-radius:6px;font-weight:600;font-size:13px}
+  #vista button{border:0;background:transparent;color:#fff;opacity:.75;padding:6px 12px;border-radius:6px;font-weight:600;font-size:13px;white-space:nowrap}
   #vista button.on{background:#fff;color:var(--navy);opacity:1}
   .tb{border:1px solid rgba(255,255,255,.22);background:transparent;color:#fff;border-radius:8px;padding:6px 11px;font-size:13px;white-space:nowrap}
   .tb:hover{background:rgba(255,255,255,.12)}
@@ -135,7 +158,7 @@ TEMPLATE = r"""<!DOCTYPE html>
   tbody tr:hover td{background:#f5f8fc}
   tbody tr.sel td{background:var(--acc-soft)}
   tbody tr:last-child td{border-bottom:0}
-  td.desc{white-space:normal;min-width:260px;color:#3b4756}
+  td.desc{white-space:normal;min-width:260px;max-width:420px;color:#3b4756}
   td.desc span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
   td.loc b{display:block;font-weight:600}
   td.loc small{color:var(--mut)}
@@ -213,7 +236,8 @@ TEMPLATE = r"""<!DOCTYPE html>
 
   @media (max-width:900px){
     #top{gap:8px;padding:0 10px}
-    #top h1 small,#stats,.tb.opc{display:none}
+    #top h1 small,.tb.opc{display:none}
+    #vista button{padding:6px 8px;font-size:12px}
     #btnFiltros{display:inline-block}
     #filtros{position:absolute;z-index:30;top:0;bottom:0;left:0;transform:translateX(-105%);transition:transform .2s;width:min(320px,90vw)}
     #filtros.on{transform:none;box-shadow:8px 0 24px rgba(0,0,0,.15)}
@@ -227,9 +251,8 @@ TEMPLATE = r"""<!DOCTYPE html>
 <div id="top">
   <button class="tb" id="btnFiltros" onclick="document.getElementById('filtros').classList.toggle('on')">☰ Filtros</button>
   <h1>Subastas BOE<small>viviendas · solares · fincas rústicas</small></h1>
-  <span id="stats"></span>
   <div id="vista">
-    <button data-v="tabla" class="on">☰ Tabla</button><button data-v="mapa">◎ Mapa</button>
+    <button data-v="tabla" class="on">Tabla</button><button data-v="mapa">Mapa</button><button data-v="seg">★ Seguimiento <span id="nSeg"></span></button><button data-v="ana">Análisis</button>
   </div>
   <button class="tb opc" onclick="abrirModal('mGloss')">Glosario</button>
   <button class="tb opc" onclick="abrirModal('mGuia')">Cómo funciona</button>
@@ -238,6 +261,10 @@ TEMPLATE = r"""<!DOCTYPE html>
 
 <div id="cuerpo">
   <aside id="filtros">
+    <h4>Estado</h4>
+    <div class="seg" id="estSeg">
+      <button type="button" data-v="activas" class="on">Activas</button><button type="button" data-v="proxima_apertura">Próximas</button><button type="button" data-v="celebrandose">En curso</button><button type="button" data-v="concluida">Concluidas</button>
+    </div>
     <h4>Buscar</h4>
     <label><input id="q" placeholder="localidad, dirección, descripción…"></label>
     <h4>Precio y tipo</h4>
@@ -275,6 +302,8 @@ TEMPLATE = r"""<!DOCTYPE html>
   <div id="main">
     <div class="vista on" id="vTabla"></div>
     <div class="vista" id="vMapa"><div id="mapa"></div></div>
+    <div class="vista" id="vSeg"></div>
+    <div class="vista" id="vAna"></div>
     <div id="detalle"></div>
   </div>
 </div>
@@ -303,7 +332,16 @@ const fmt = n => n==null ? "—" : String(Math.round(n)).replace(/\B(?=(\d{3})+(
 const eur = n => n==null ? "—" : fmt(n)+" €";
 const esc = s => String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
 const $ = id => document.getElementById(id);
-let sortKey="fecha_fin", sortDir=1, filtrados=[], claseVal="", vistaActual="tabla", selId=null;
+let sortKey="fecha_fin", sortDir=1, filtrados=[], claseVal="", estVal="activas", vistaActual="tabla", selId=null;
+const ESTADO = {proxima_apertura:"Próx. apertura", celebrandose:"Celebrándose", concluida:"Concluida", suspendida:"Suspendida", cancelada:"Cancelada"};
+const tagEst = d => `<span class="est ${d.estado}">${ESTADO[d.estado]||d.estado||"?"}</span>`;
+// ---- seguimiento (estrella), guardado en el navegador ----
+let favs = new Set(); try{ favs = new Set(JSON.parse(localStorage.getItem('boe_seguimiento')||"[]")); }catch(e){}
+function guardarFavs(){ try{ localStorage.setItem('boe_seguimiento', JSON.stringify([...favs])); }catch(e){} $('nSeg').textContent = favs.size ? `(${favs.size})` : ""; }
+function toggleFav(id, ev){ if(ev) ev.stopPropagation(); favs.has(id) ? favs.delete(id) : favs.add(id); guardarFavs();
+  document.querySelectorAll(`.star[data-id="${id}"]`).forEach(b=>b.classList.toggle('on',favs.has(id)));
+  if(vistaActual==='seg') renderSeg(); }
+const starBtn = id => `<button class="star ${favs.has(id)?'on':''}" data-id="${id}" title="Seguimiento" onclick="toggleFav('${id}',event)">★</button>`;
 const PREC = {exacta:"Ubicación exacta", municipio:"Aprox. · centro del municipio", provincia:"Aprox. · capital de provincia"};
 
 // ---------- utilidades de presentacion ----------
@@ -324,7 +362,8 @@ function tagPujas(d){
 function setVista(v){
   vistaActual=v;
   document.querySelectorAll('#vista button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
-  $('vTabla').classList.toggle('on',v==='tabla'); $('vMapa').classList.toggle('on',v==='mapa');
+  ['tabla','mapa','seg','ana'].forEach(k=>$('v'+k[0].toUpperCase()+k.slice(1)).classList.toggle('on',v===k));
+  if(v==='seg') renderSeg(); if(v==='ana') renderAna();
   if(v==='mapa'){ setTimeout(()=>{ map.invalidateSize(); if(!mapaAjustado){ zoomAFiltrados(); mapaAjustado=true; } },30); }
 }
 document.querySelectorAll('#vista button').forEach(b=>b.onclick=()=>setVista(b.dataset.v));
@@ -368,7 +407,8 @@ function icono(d){
 function popupHtml(d){
   const aprox=d.precision&&d.precision!=='exacta';
   return `<div class="pop">
-    <div class="hd"><span class="precio">${eur(d.precio_ref)}</span><span class="pill ${d.subtipo}">${esc(d.subtipo)}</span></div>
+    <div class="hd"><span class="precio">${eur(d.precio_ref)}</span><span class="pill ${d.subtipo}">${esc(d.subtipo)}</span><span style="margin-left:auto">${starBtn(d.id_sub)}</span></div>
+    <div style="margin-bottom:6px">${tagEst(d)}</div>
     <div class="sub">${esc(d.localidad||"")}${d.barrio?" · "+esc(d.barrio):""} · ${esc(d.provincia||"")}</div>
     ${aprox?`<div class="aviso">${PREC[d.precision]}. La ficha del BOE indica la dirección real.</div>`:""}
     <div class="grid">
@@ -404,7 +444,7 @@ function abrirDetalle(id){
   marcarFila(id,false);
   const p=$('detalle'); const aprox=d.precision&&d.precision!=='exacta';
   p.innerHTML=`<button class="x" onclick="cerrarDetalle()">✕</button>
-    <span class="pill ${d.subtipo}">${esc(d.subtipo)}</span> <span class="tag mut">${esc(d.clase)}</span>
+    ${tagEst(d)} <span class="pill ${d.subtipo}">${esc(d.subtipo)}</span> <span class="tag mut">${esc(d.clase)}</span> ${starBtn(d.id_sub)}
     <div class="precio">${eur(d.precio_ref)}</div>
     <div class="sub">${esc(d.direccion||"")}<br>${esc(d.localidad||"")}${d.barrio?" · "+esc(d.barrio):""} · ${esc(d.provincia||"")} · ${esc(d.ccaa||"")}</div>
     ${tagCierre(d)} ${tagPujas(d)}
@@ -466,6 +506,8 @@ function aplica(){
   const ahora=Date.now();
   DATOS.forEach(d=>{ d.horas_rest = d.fecha_fin_dt ? (new Date(d.fecha_fin_dt)-ahora)/3.6e6 : null; });
   filtrados = DATOS.filter(d=>{
+    if(estVal==='activas'){ if(d.estado!=='proxima_apertura' && d.estado!=='celebrandose') return false; }
+    else if(estVal && d.estado!==estVal) return false;
     if(d.precio_ref==null || d.precio_ref>pmax) return false;
     if(sub && d.subtipo!==sub) return false;
     if(claseVal && d.clase!==claseVal) return false;
@@ -485,16 +527,17 @@ function aplica(){
   render();
 }
 
-function render(){
-  const cols=[["precio_ref","Precio","num"],["subtipo","Tipo",""],["superficie_m2","m²","num"],["eur_m2","€/m²","num"],
+function tablaHtml(lista, ordenable){
+  const cols=[["estado","Estado",""],["precio_ref","Precio","num"],["subtipo","Tipo",""],["superficie_m2","m²","num"],["eur_m2","€/m²","num"],
     ["dist_costa_m","Al mar","num"],["localidad","Localidad",""],["descripcion","Descripción",""],
     ["fecha_fin","Cierre",""],["num_pujas","Pujas",""]];
-  let h="<table><thead><tr>";
-  cols.forEach(c=>h+=`<th class="${c[2]} ${sortKey===c[0]?'on':''}" data-k="${c[0]}">${c[1]}${sortKey===c[0]?`<span class="dir">${sortDir>0?'▲':'▼'}</span>`:''}</th>`);
+  let h="<table><thead><tr><th></th>";
+  cols.forEach(c=>h+=`<th class="${c[2]} ${ordenable&&sortKey===c[0]?'on':''}" ${ordenable?`data-k="${c[0]}"`:''}>${c[1]}${ordenable&&sortKey===c[0]?`<span class="dir">${sortDir>0?'▲':'▼'}</span>`:''}</th>`);
   h+="<th></th></tr></thead><tbody>";
-  filtrados.forEach(d=>{
+  lista.forEach(d=>{
     const cerca = d.dist_costa_m!=null && d.dist_costa_m<=500;
     h+=`<tr data-id="${d.id_sub}" class="${selId===d.id_sub?'sel':''}">`+
+      `<td>${starBtn(d.id_sub)}</td><td>${tagEst(d)}</td>`+
       `<td class="precio num">${eur(d.precio_ref)}${d.deposito?`<small>dep. ${eur(d.deposito)}</small>`:""}</td>`+
       `<td class="fil" data-f="sub" data-v="${esc(d.subtipo)}"><span class="pill ${d.subtipo}">${esc(d.subtipo)}</span></td>`+
       `<td class="num">${d.superficie_m2?fmt(d.superficie_m2):""}</td><td class="num">${d.eur_m2?fmt(d.eur_m2):""}</td>`+
@@ -502,32 +545,77 @@ function render(){
       `<td class="loc"><b class="fil" data-f="loc" data-v="${esc(d.localidad)}">${esc(d.localidad||"")}</b><small class="fil" data-f="prov" data-v="${esc(d.provincia)}">${esc(d.provincia||"")}</small></td>`+
       `<td class="desc"><span title="${esc(d.descripcion)}">${esc(d.descripcion||"")}</span></td>`+
       `<td>${fechaTxt(d.fecha_fin)}<br>${tagCierre(d)}</td>`+
-      `<td>${tagPujas(d)}</td>`+
+      `<td>${d.estado==='concluida'&&d.puja_maxima?`${pujasTxt(d)}<br><small class="mut">máx. ${eur(d.puja_maxima)}${d.pct_valor?` (${d.pct_valor}%)`:""}</small>`:tagPujas(d)}</td>`+
       `<td><a href="${esc(d.url)}" target="_blank" onclick="event.stopPropagation()">BOE ↗</a></td></tr>`;
   });
-  h+="</tbody></table>";
-  if(!filtrados.length) h='<div class="vacio">Ningún lote cumple los filtros.</div>';
-  $('vTabla').innerHTML=h;
-  const conPunto=filtrados.filter(d=>d.lat).length;
-  $('stats').textContent=`${filtrados.length} de ${DATOS.length} lotes · ${filtrados.filter(d=>d.dist_costa_m<=500).length} a <500 m del mar`+(conPunto<filtrados.length?` · ${filtrados.length-conPunto} sin ubicar`:"");
-  document.querySelectorAll('th[data-k]').forEach(th=>th.onclick=()=>{ const k=th.dataset.k; sortDir=(k===sortKey)?-sortDir:1; sortKey=k; aplica();});
-  document.querySelectorAll('#vTabla tr[data-id]').forEach(tr=>{ tr.onclick=()=>abrirDetalle(tr.dataset.id); });
-  document.querySelectorAll('#vTabla .fil').forEach(td=>td.onclick=(e)=>{ e.stopPropagation(); const el=$(td.dataset.f); if(el){ el.value=td.dataset.v; aplica(); } });
+  return h+"</tbody></table>";
+}
+function activarTabla(cont){
+  cont.querySelectorAll('tr[data-id]').forEach(tr=>{ tr.onclick=()=>abrirDetalle(tr.dataset.id); });
+  cont.querySelectorAll('.fil').forEach(td=>td.onclick=(e)=>{ e.stopPropagation(); const el=$(td.dataset.f); if(el){ el.value=td.dataset.v; aplica(); } });
+}
+function render(){
+  $('vTabla').innerHTML = filtrados.length ? tablaHtml(filtrados,true) : '<div class="vacio">Ningún lote cumple los filtros.</div>';
+  document.querySelectorAll('#vTabla th[data-k]').forEach(th=>th.onclick=()=>{ const k=th.dataset.k; sortDir=(k===sortKey)?-sortDir:1; sortKey=k; aplica();});
+  activarTabla($('vTabla'));
   pintarMapa();
+  if(vistaActual==='seg') renderSeg(); if(vistaActual==='ana') renderAna();
+}
+function renderSeg(){
+  const lista = DATOS.filter(d=>favs.has(d.id_sub)).sort((a,b)=>(a.fecha_fin||"z")<(b.fecha_fin||"z")?-1:1);
+  $('vSeg').innerHTML = lista.length ? `<p class="mut" style="margin:0 0 10px;font-size:12.5px">${lista.length} subastas en seguimiento. Se guardan en este navegador. Pulsa ★ para quitar.</p>`+tablaHtml(lista,false)
+    : '<div class="vacio">Sin subastas en seguimiento. Marca la ★ de cualquier lote en la tabla, el mapa o el detalle.</div>';
+  activarTabla($('vSeg'));
+}
+
+// ---------- analisis de subastas concluidas ----------
+function pct(a,b){ return b ? Math.round(100*a/b) : 0; }
+function barras(titulo, grupos, cls){
+  const max=Math.max(1,...grupos.map(g=>g[1]));
+  return `<div class="card"><h3>${titulo}</h3>`+grupos.map(g=>`<div class="bar ${cls||''}"><span style="text-align:left;color:var(--fg)">${esc(g[0])}</span><i style="width:${pct(g[1],max)}%"></i><span>${g[2]!=null?g[2]:g[1]}</span></div>`).join("")+`</div>`;
+}
+function renderAna(){
+  // concluidas que cumplen los filtros de tipo/lugar (ignora estado y precio)
+  const sub=$('sub').value, ccaa=$('ccaa').value, prov=$('prov').value, loc=$('loc').value.trim().toLowerCase();
+  const C = DATOS.filter(d=>d.estado==='concluida' && (!sub||d.subtipo===sub) && (!claseVal||d.clase===claseVal) && (!ccaa||d.ccaa===ccaa) && (!prov||d.provincia===prov) && (!loc||(d.localidad||"").toLowerCase().includes(loc)));
+  if(!C.length){ $('vAna').innerHTML='<div class="vacio">Todavía no hay subastas concluidas en la base de datos.<br><small>Se incorporan con <code>python run.py historico</code> (el proceso automático lo hace a diario).</small></div>'; return; }
+  const conDato=C.filter(d=>d.num_pujas!=null), sinP=conDato.filter(d=>d.num_pujas===0), unaP=conDato.filter(d=>d.num_pujas===1);
+  const ratios=C.filter(d=>d.pct_valor!=null).map(d=>d.pct_valor).sort((a,b)=>a-b);
+  const mediana=ratios.length?ratios[Math.floor(ratios.length/2)]:null;
+  const bajo50=C.filter(d=>d.pct_valor!=null&&d.pct_valor<50).length, bajo70=C.filter(d=>d.pct_valor!=null&&d.pct_valor<70).length;
+  let h=`<div class="kpis">
+    <div class="kpi"><small>Concluidas analizadas</small><b>${C.length}</b><span>${conDato.length} con datos de pujas</span></div>
+    <div class="kpi"><small>Sin ninguna puja</small><b>${pct(sinP.length,conDato.length)}%</b><span>${sinP.length} subastas</span></div>
+    <div class="kpi"><small>Con una sola puja</small><b>${pct(unaP.length,conDato.length)}%</b><span>${unaP.length} subastas</span></div>
+    <div class="kpi"><small>Mejor puja / valor de subasta</small><b>${mediana!=null?mediana+"%":"—"}</b><span>mediana, ${ratios.length} con puja</span></div>
+    <div class="kpi"><small>Cerradas por debajo del 50%</small><b>${bajo50}</b><span>del valor de subasta · ${bajo70} por debajo del 70%</span></div>
+  </div>
+  <p class="mut" style="font-size:12px;margin:0 0 14px">Fuente: pestaña de pujas del portal en subastas concluidas. La mejor puja no equivale a la adjudicación definitiva (el juzgado o la AEAT deben aprobar el remate; sin pujas, el acreedor puede pedir la adjudicación). Úsalo como orientación de mercado.</p>`;
+  const tramos=[["Sin pujas",sinP.length],["< 50 %",0],["50–70 %",0],["70–100 %",0],["≥ 100 %",0]];
+  C.forEach(d=>{ if(d.pct_valor==null) return; const r=d.pct_valor; tramos[r<50?1:r<70?2:r<100?3:4][1]++; });
+  const agg=(k)=>{ const m={}; conDato.forEach(d=>{ const g=m[d[k]]=m[d[k]]||[0,0]; g[0]++; if(d.num_pujas===0) g[1]++; }); return Object.entries(m).sort((a,b)=>b[1][0]-a[1][0]).map(([n,[t,s]])=>[`${n} (${t})`, pct(s,t), pct(s,t)+"%"]); };
+  h+=`<div class="grid2">${barras("Mejor puja como % del valor de subasta",tramos)}${barras("Sin pujas por tipo (% de las concluidas)",agg('subtipo'),'w')}</div>`;
+  h+=`<div class="grid2">${barras("Sin pujas por provincia",agg('provincia'),'w')}${barras("Sin pujas por clase",agg('clase'),'w')}</div>`;
+  const baratas=C.filter(d=>d.pct_valor!=null&&d.num_pujas>0).sort((a,b)=>a.pct_valor-b.pct_valor).slice(0,40);
+  h+=`<div class="card"><h3>Cerradas más baratas respecto al valor de subasta</h3><p class="nota">Mejor puja más baja en proporción al valor. ${baratas.length} de ${C.length}.</p>${baratas.length?tablaHtml(baratas,false):""}</div>`;
+  const desiertas=sinP.slice().sort((a,b)=>(b.fecha_fin||"")<(a.fecha_fin||"")?-1:1).slice(0,40);
+  h+=`<div class="card"><h3>Quedaron sin pujas (desiertas)</h3><p class="nota">Pueden volver a salir a subasta o adjudicarse al acreedor. Últimas ${desiertas.length}.</p>${desiertas.length?tablaHtml(desiertas,false):""}</div>`;
+  $('vAna').innerHTML=h; activarTabla($('vAna'));
 }
 
 $('dl').onclick=()=>{
   const cols=["id_sub","subtipo","estado","precio_ref","valor_subasta","postura_minima","deposito","superficie_m2","eur_m2",
-    "descripcion","direccion","localidad","provincia","ccaa","dist_costa_m","lat","lon","precision","fecha_inicio","fecha_fin","num_pujas","anuncio_boe","url"];
+    "descripcion","direccion","localidad","provincia","ccaa","dist_costa_m","lat","lon","precision","fecha_inicio","fecha_fin","num_pujas","puja_maxima","pct_valor","anuncio_boe","url"];
   const e=v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"';
   let csv="﻿"+cols.join(";")+"\n"; filtrados.forEach(d=>csv+=cols.map(c=>e(d[c])).join(";")+"\n");
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"})); a.download="subastas_filtradas.csv"; a.click();
 };
 ['q','pmax','sub','prov','loc','solomar','sinpuj','hmax','fdesde','fhasta','soloc'].forEach(id=>{ $(id).addEventListener('input',aplica); $(id).addEventListener('change',aplica); });
+document.querySelectorAll('#estSeg button').forEach(b=>b.onclick=()=>{ document.querySelectorAll('#estSeg button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); estVal=b.dataset.v; aplica();});
 document.querySelectorAll('#claseSeg button').forEach(b=>b.onclick=()=>{ document.querySelectorAll('#claseSeg button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); claseVal=b.dataset.v; aplica();});
 $('orden').addEventListener('change',e=>{ const [k,dd]=e.target.value.split("|"); sortKey=k; sortDir=parseInt(dd); aplica();});
 $('limpiar').onclick=()=>{ ['q','loc','hmax','fdesde','fhasta'].forEach(id=>$(id).value=""); ['sub','ccaa','prov'].forEach(id=>$(id).value=""); $('pmax').value=60000;
-  ['solomar','sinpuj','soloc'].forEach(id=>$(id).checked=false); claseVal=""; document.querySelectorAll('#claseSeg button').forEach(x=>x.classList.toggle('on',x.dataset.v==="")); refrescarProv(); aplica(); };
+  ['solomar','sinpuj','soloc'].forEach(id=>$(id).checked=false); claseVal=""; estVal="activas"; document.querySelectorAll('#estSeg button').forEach(x=>x.classList.toggle('on',x.dataset.v==="activas")); document.querySelectorAll('#claseSeg button').forEach(x=>x.classList.toggle('on',x.dataset.v==="")); refrescarProv(); aplica(); };
 
 // ---------- modales ----------
 function abrirModal(id){$(id).classList.add('on');}
@@ -535,7 +623,7 @@ function cerrarModal(id){$(id).classList.remove('on');}
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){ document.querySelectorAll('.modal.on').forEach(m=>m.classList.remove('on')); cerrarDetalle(); }});
 $('glossQ').addEventListener('input',e=>{ const q=e.target.value.toLowerCase().trim();
   document.querySelectorAll('#glossList .term').forEach(t=>{ t.classList.toggle('oculto', q && !t.textContent.toLowerCase().includes(q));}); });
-aplica();
+guardarFavs(); aplica();
 </script>
 </body>
 </html>"""

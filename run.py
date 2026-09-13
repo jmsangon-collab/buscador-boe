@@ -24,6 +24,11 @@ def _now():
     return dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
+ESTADO_NOMBRE = {"PU": "proxima_apertura", "EJ": "celebrandose", "SU": "suspendida",
+                 "CA": "cancelada", "PC": "concluida", "FS": "concluida"}
+ACTIVOS = ("proxima_apertura", "celebrandose")
+
+
 # ---------------------------------------------------------------- crawl -----
 def crawl(args):
     provincias = args.provincias or config.PROVINCIAS_OBJETIVO
@@ -60,7 +65,7 @@ def crawl(args):
                         continue
                     d["subtipo"] = sub
                     d["provincia_cod"] = prov
-                    d["estado"] = {"PU": "proxima_apertura", "EJ": "celebrandose"}.get(estado, estado)
+                    d["estado"] = ESTADO_NOMBRE.get(estado, estado)
                     d["fetched_at"] = _now()
                     db.upsert(con, d)
                     total += 1
@@ -70,9 +75,12 @@ def crawl(args):
                 con.commit()
     con.commit()
     print(f"[OK] {total} lotes guardados en {db.DB_PATH}")
-    # rastreo completo: los lotes no vistos ya no estan en PU/EJ -> fuera
+    # rastreo completo: los lotes activos no vistos ya no estan en PU/EJ -> fuera
+    # (las concluidas del historico se conservan)
     if not args.provincias and not args.subtipos and not args.desde:
-        borrados = con.execute("DELETE FROM subastas WHERE fetched_at < ?", (inicio,)).rowcount
+        borrados = con.execute(
+            "DELETE FROM subastas WHERE fetched_at < ? AND estado IN (?, ?)",
+            (inicio, *ACTIVOS)).rowcount
         con.commit()
         print(f"[OK] {borrados} lotes caducados eliminados")
 
@@ -100,6 +108,56 @@ def enrich(args):
             print(f"  ...{i}/{len(filas)}")
     con.commit()
     print("[OK] enriquecimiento completado")
+
+
+# ------------------------------------------------------------ historico -----
+def historico(args):
+    """Rastrea subastas CONCLUIDAS (PC/FS) y guarda ficha + pujas. Se acumulan
+    en la BD (no se purgan) para el apartado de analisis. Solo pide al portal
+    las que aun no tenemos."""
+    provincias = args.provincias or config.PROVINCIAS_OBJETIVO
+    subtipos = args.subtipos or config.SUBTIPOS
+    con = db.conectar()
+    cli = BoeClient()
+    tenemos = {r[0] for r in con.execute("SELECT id_sub FROM subastas WHERE estado='concluida'")}
+    total = 0
+    for prov in provincias:
+        for sub in subtipos:
+            for estado in ("PC", "FS"):
+                try:
+                    ids = cli.buscar(subtipo=SUBTIPOS[sub], provincia=prov, estado=estado)
+                except BloqueoCaptcha as e:
+                    con.commit()
+                    raise SystemExit(f"[X] historico interrumpido en {nombre(prov)}/{sub}: {e}")
+                except Exception as e:
+                    print(f"  [!] {nombre(prov)}/{sub}/{estado}: {e}")
+                    continue
+                nuevos = [i for i in ids if i not in tenemos]
+                if not nuevos:
+                    continue
+                print(f"  {nombre(prov):22} {sub:13} {estado:4} -> {len(nuevos)} nuevas de {len(ids)}")
+                for i, id_sub in enumerate(nuevos, 1):
+                    try:
+                        d = cli.detalle(id_sub)
+                    except BloqueoCaptcha as e:
+                        con.commit()
+                        raise SystemExit(f"[X] historico interrumpido: {e}")
+                    except Exception as e:
+                        print(f"      [!] ficha {id_sub}: {e}")
+                        continue
+                    d["subtipo"] = sub
+                    d["provincia_cod"] = prov
+                    d["estado"] = "concluida"
+                    d["fetched_at"] = _now()
+                    db.upsert(con, d)
+                    tenemos.add(id_sub)
+                    total += 1
+                    if i % 20 == 0:
+                        con.commit()
+                        print(f"      ...{i}/{len(nuevos)}")
+                con.commit()
+    con.commit()
+    print(f"[OK] {total} subastas concluidas nuevas guardadas")
 
 
 # -------------------------------------------------------------- refresh -----
@@ -169,6 +227,11 @@ def main():
     c.add_argument("--subtipos", nargs="*", choices=list(SUBTIPOS))
     c.add_argument("--desde", help="reanudar desde este codigo de provincia (ej: 12)")
     c.set_defaults(func=crawl)
+
+    hi = sub.add_parser("historico", help="rastrear subastas concluidas (analisis)")
+    hi.add_argument("--provincias", nargs="*")
+    hi.add_argument("--subtipos", nargs="*", choices=list(SUBTIPOS))
+    hi.set_defaults(func=historico)
 
     e = sub.add_parser("enrich", help="geocodificar + distancia a la costa")
     e.set_defaults(func=enrich)
