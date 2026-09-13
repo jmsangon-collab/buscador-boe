@@ -58,6 +58,19 @@ El sistema extrae además los **m² de la descripción** del BOE y calcula el
 **€/m² real del lote** (precio ÷ superficie), un dato intrínseco útil para
 comparar lotes entre sí. Se muestra como columna en el visor y en el export.
 
+## Web publicada (GitHub Pages)
+
+El visor está publicado en <https://jmsangon-collab.github.io/buscador-boe/>.
+
+- `.github/workflows/update.yml` se ejecuta cada día a las 03:15 UTC: rastrea
+  el BOE, geocodifica, regenera el visor, guarda `data/subastas.db` y
+  `web_publicar/index.html` en el repo y despliega la web. Se puede lanzar a
+  mano desde la pestaña *Actions* (o `gh workflow run update`).
+- `.github/workflows/pages.yml` despliega `web_publicar/` en cada push que lo
+  modifique. Para publicar desde local: `python run.py all` y `git push`.
+- `run.py crawl` sin acotar borra de la BD los lotes que ya no aparecen en el
+  portal (subastas terminadas).
+
 ## Notas y límites
 
 - **Distancia a la costa**: se calcula con la costa de Natural Earth 10m
