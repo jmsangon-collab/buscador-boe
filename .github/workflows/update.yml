@@ -3,6 +3,9 @@
 # GitHub Pages. Tambien se puede lanzar a mano (workflow_dispatch).
 name: update
 on:
+  push:
+    branches: [master]
+    paths: [.github/workflows/update.yml]
   schedule:
     - cron: "15 3 * * *"   # 03:15 UTC cada dia
   workflow_dispatch:
