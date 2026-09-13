@@ -14,3 +14,6 @@ venv/
 conversation_bookmark.md
 data/crawl.log
 data/crawl.err
+data/enrich.log
+data/enrich.err
+data/subastas_local_parcial.db

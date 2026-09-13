@@ -67,8 +67,13 @@ def _euros(txt):
     return float(m.group(1).replace(".", "").replace(",", "."))
 
 
+class BloqueoCaptcha(RuntimeError):
+    """El portal pide una verificacion de seguridad (captcha): nos ha limitado
+    por volumen de peticiones. Hay que esperar y bajar el ritmo."""
+
+
 class BoeClient:
-    def __init__(self, pausa=0.7):
+    def __init__(self, pausa=2.0):
         self.s = requests.Session()
         self.s.headers.update(HEADERS)
         self.pausa = pausa
@@ -80,6 +85,8 @@ class BoeClient:
                 r = self.s.request(metodo, url, timeout=45, **kw)
                 r.encoding = "ISO-8859-15"  # el portal sirve latin-9, no utf-8
                 time.sleep(self.pausa)
+                if "Verificaci&#xF3;n de seguridad" in r.text or "Verificación de seguridad" in r.text:
+                    raise BloqueoCaptcha("el portal pide captcha; espera un rato y reintenta")
                 return r
             except requests.exceptions.RequestException as e:
                 if i == intentos - 1:

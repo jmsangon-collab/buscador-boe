@@ -16,7 +16,7 @@ import datetime as dt
 
 import config
 import db
-from boe import BoeClient, SUBTIPOS
+from boe import BoeClient, BloqueoCaptcha, SUBTIPOS
 from provincias import nombre
 
 
@@ -27,6 +27,8 @@ def _now():
 # ---------------------------------------------------------------- crawl -----
 def crawl(args):
     provincias = args.provincias or config.PROVINCIAS_OBJETIVO
+    if args.desde:  # reanudar un rastreo interrumpido
+        provincias = [p for p in provincias if p >= args.desde]
     subtipos = args.subtipos or config.SUBTIPOS
     con = db.conectar()
     cli = BoeClient()
@@ -37,6 +39,10 @@ def crawl(args):
             for estado in config.ESTADOS:
                 try:
                     ids = cli.buscar(subtipo=SUBTIPOS[sub], provincia=prov, estado=estado)
+                except BloqueoCaptcha as e:
+                    con.commit()
+                    raise SystemExit(f"[X] rastreo interrumpido en {nombre(prov)}/{sub}: {e}. "
+                                     f"No se purgan lotes.")
                 except Exception as e:
                     print(f"  [!] {nombre(prov)}/{sub}/{estado or 'prox'}: {e}")
                     continue
@@ -46,6 +52,9 @@ def crawl(args):
                 for i, id_sub in enumerate(ids, 1):
                     try:
                         d = cli.detalle(id_sub)
+                    except BloqueoCaptcha as e:
+                        con.commit()
+                        raise SystemExit(f"[X] rastreo interrumpido: {e}. No se purgan lotes.")
                     except Exception as e:
                         print(f"      [!] ficha {id_sub}: {e}")
                         continue
@@ -62,7 +71,7 @@ def crawl(args):
     con.commit()
     print(f"[OK] {total} lotes guardados en {db.DB_PATH}")
     # rastreo completo: los lotes no vistos ya no estan en PU/EJ -> fuera
-    if not args.provincias and not args.subtipos:
+    if not args.provincias and not args.subtipos and not args.desde:
         borrados = con.execute("DELETE FROM subastas WHERE fetched_at < ?", (inicio,)).rowcount
         con.commit()
         print(f"[OK] {borrados} lotes caducados eliminados")
@@ -158,6 +167,7 @@ def main():
     c = sub.add_parser("crawl", help="rastrear el BOE")
     c.add_argument("--provincias", nargs="*", help="codigos INE, ej: 04 29")
     c.add_argument("--subtipos", nargs="*", choices=list(SUBTIPOS))
+    c.add_argument("--desde", help="reanudar desde este codigo de provincia (ej: 12)")
     c.set_defaults(func=crawl)
 
     e = sub.add_parser("enrich", help="geocodificar + distancia a la costa")
@@ -182,6 +192,7 @@ def main():
     a.add_argument("--precio-max", type=float)
     a.add_argument("--provincias", nargs="*")
     a.add_argument("--subtipos", nargs="*", choices=list(SUBTIPOS))
+    a.add_argument("--desde")
     a.set_defaults(func=None)
 
     args = p.parse_args()
