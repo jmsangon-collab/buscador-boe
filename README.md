@@ -49,43 +49,14 @@ Edita `config.py`:
 ## El visor HTML
 
 `data/visor.html` es autónomo (datos embebidos). Se abre en el navegador con
-doble clic. Permite filtrar por texto, precio, subtipo, provincia, estado y
-distancia al mar; ordenar columnas; ver los lotes en un mapa; y **descargar en
+doble clic. Permite filtrar por texto, precio, subtipo, clase (rural/urbano),
+CCAA, provincia, localidad, estado y distancia al mar; ordenar columnas; ver los lotes en un mapa; y **descargar en
 CSV** (se abre en Excel) la selección filtrada. Cada lote enlaza a su ficha
 oficial del BOE.
 
-## Detección de gangas (€/m² vs mercado)
-
-El sistema extrae los **m² de la descripción** del BOE, calcula el **€/m² real
-del lote** y lo compara con el precio de mercado de su **zona** para marcar
-gangas (`ganga = €/m² lote ≤ 60% del mercado`, ajustable en `precios.py`).
-
-La referencia se toma **por barrio → distrito → municipio** (nunca provincial:
-no sirve). Cada subasta se asigna a su barrio mediante *reverse-geocoding* de
-sus coordenadas.
-
-Los precios de mercado se cargan una sola vez desde `data/precios_ref.csv`:
-
-```
-tipo;ambito;municipio;zona;eur_m2
-vivienda;barrio;Malaga;Pedregalejo;3200
-vivienda;distrito;Almeria;Centro;1900
-vivienda;municipio;Roquetas de Mar;;1600
-```
-
-Rellénalo **una vez** con datos de Idealista (sus
-[informes de precio por zona](https://www.idealista.com/sala-de-prensa/informes-precio-vivienda/))
-y déjalo fijo. **No se scrapea Idealista** (sus términos lo prohíben y tiene
-anti-bot): es un dataset preprocesado que tú aportas. La comparación es fiable
-para **vivienda**; para suelo rústico la referencia es débil.
-
-Exportar solo gangas:
-
-```bash
-python run.py export --solo-gangas
-```
-
-En el visor: filtro **% mercado max** y casilla **solo gangas** (fila resaltada).
+El sistema extrae además los **m² de la descripción** del BOE y calcula el
+**€/m² real del lote** (precio ÷ superficie), un dato intrínseco útil para
+comparar lotes entre sí. Se muestra como columna en el visor y en el export.
 
 ## Notas y límites
 

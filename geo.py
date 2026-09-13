@@ -9,6 +9,7 @@ Precision ~ algunos cientos de metros: suficiente como PRIMER filtro
 Para mas precision, sustituye data/coastline.geojson por una costa OSM.
 """
 import os
+import re
 import time
 import requests
 
@@ -24,32 +25,86 @@ ESPANA_BBOX = (-19.0, 27.0, 5.0, 44.5)
 CRS_METROS = "EPSG:25830"  # ETRS89 / UTM 30N (metros)
 
 
-# --------------------------------------------------------------------------
-def geocodificar(direccion, localidad, provincia, cod_postal=None):
-    """Devuelve dict(lat, lon, barrio, distrito, municipio) o None.
-    Una sola llamada (addressdetails=1). Respeta el limite de 1 req/s."""
-    partes = [p for p in (direccion, cod_postal, localidad, provincia) if p and p != "No consta"]
-    if not partes:
+# Abreviaturas de tipo de via -> forma que Nominatim entiende.
+_VIA_ABREV = [
+    (r"^\s*CL\b", "Calle"), (r"^\s*C/\s*", "Calle "), (r"^\s*C\.\s*", "Calle "),
+    (r"^\s*CR\b", "Carretera"), (r"^\s*CTRA\b", "Carretera"),
+    (r"^\s*AV(?:DA)?\b", "Avenida"), (r"^\s*PZ(?:A)?\b", "Plaza"),
+    (r"^\s*P[ºo]\s*", "Paseo "), (r"^\s*PS\b", "Paseo"), (r"^\s*PSJE\b", "Pasaje"),
+    (r"^\s*CJON\b", "Callejon"), (r"^\s*GTA\b", "Glorieta"),
+    (r"^\s*URB\b", "Urbanizacion"), (r"^\s*RD\b", "Ronda"),
+    (r"^\s*CMNO?\b", "Camino"), (r"^\s*TRV\b", "Travesia"), (r"^\s*BO\b", "Barrio"),
+]
+
+
+def limpiar_direccion(d):
+    """Reduce una direccion registral ('CALLE GRANADA Nº 38 ESCALERA E PLANTA 1
+    PUERTA 2') a 'Calle GRANADA 38', que es lo que Nominatim sabe geocodificar.
+    Expande la abreviatura de via, quita el marcador de numero y corta el ruido
+    (escalera/planta/puerta/bloque...) tras el primer numero de portal."""
+    if not d:
         return None
-    q = ", ".join(partes) + ", Espana"
+    t = re.sub(r"\s+", " ", d).strip()
+    for pat, rep in _VIA_ABREV:
+        nuevo = re.sub(pat, rep, t, count=1, flags=re.IGNORECASE)
+        if nuevo != t:
+            t = nuevo
+            break
+    # "Nº 38" / "N°38" / "N�13" / "num. 38" -> "38"
+    t = re.sub(r"\bN[ºo°\.º�]*\s*(?=\d)", "", t, flags=re.IGNORECASE)
+    t = re.sub(r"\bn[uú]m\.?\s*(?=\d)", "", t, flags=re.IGNORECASE)
+    # conservar 'via nombre <primer numero de portal>' y tirar el resto
+    m = re.search(r"^(.*?\d{1,4})\b", t)
+    if m:
+        t = m.group(1)
+    t = re.sub(r"\s+", " ", t).strip(" ,.-")
+    return t or None
+
+
+def _pedir(q):
+    """Una consulta a Nominatim (respeta 1 req/s). Devuelve el primer resultado o None."""
     try:
         r = requests.get(NOMINATIM, headers=UA, timeout=30, params={
             "q": q, "format": "jsonv2", "limit": 1, "countrycodes": "es",
             "addressdetails": 1})
         time.sleep(1.1)
         data = r.json()
-        if not data:
-            return None
-        a = data[0].get("address", {})
+        return data[0] if data else None
+    except Exception:
+        return None
+
+
+# --------------------------------------------------------------------------
+def geocodificar(direccion, localidad, provincia, cod_postal=None):
+    """Devuelve dict(lat, lon, barrio, distrito, municipio, precision) o None.
+    Intenta primero la direccion completa (limpia); si falla, cae a nivel de
+    municipio para que el lote aparezca al menos en el pueblo. precision =
+    'exacta' | 'municipio'."""
+    loc = None if (not localidad or localidad == "No consta") else localidad
+    prov = None if (not provincia or provincia == "No consta") else provincia
+    dir_limpia = limpiar_direccion(direccion)
+
+    intentos = []
+    if dir_limpia:
+        intentos.append(("exacta", ", ".join(p for p in (dir_limpia, cod_postal, loc, prov) if p) + ", Espana"))
+    # plan B: solo municipio (o CP) para no perder el lote
+    if loc or cod_postal:
+        intentos.append(("municipio", ", ".join(p for p in (loc, cod_postal, prov) if p) + ", Espana"))
+
+    for precision, q in intentos:
+        d = _pedir(q)
+        if not d:
+            continue
+        a = d.get("address", {})
         return {
-            "lat": float(data[0]["lat"]), "lon": float(data[0]["lon"]),
+            "lat": float(d["lat"]), "lon": float(d["lon"]),
             "barrio": a.get("neighbourhood") or a.get("suburb") or a.get("quarter"),
             "distrito": a.get("city_district") or a.get("district") or a.get("borough"),
             "municipio": (a.get("city") or a.get("town") or a.get("village")
                           or a.get("municipality") or localidad),
+            "precision": precision,
         }
-    except Exception:
-        return None
+    return None
 
 
 # --------------------------------------------------------------------------

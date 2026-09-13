@@ -73,17 +73,28 @@ class BoeClient:
         self.s.headers.update(HEADERS)
         self.pausa = pausa
 
+    def _req(self, metodo, url, intentos=4, **kw):
+        """Peticion con reintentos: el portal corta conexiones de vez en cuando."""
+        for i in range(intentos):
+            try:
+                r = self.s.request(metodo, url, timeout=45, **kw)
+                r.encoding = "ISO-8859-15"  # el portal sirve latin-9, no utf-8
+                time.sleep(self.pausa)
+                return r
+            except requests.exceptions.RequestException as e:
+                if i == intentos - 1:
+                    raise
+                espera = 5 * (i + 1)
+                print(f"      [red] {e.__class__.__name__}; reintento en {espera}s")
+                time.sleep(espera)
+                self.s = requests.Session()
+                self.s.headers.update(HEADERS)
+
     def _get(self, url, **kw):
-        r = self.s.get(url, timeout=45, **kw)
-        r.encoding = "ISO-8859-15"  # el portal sirve latin-9, no utf-8
-        time.sleep(self.pausa)
-        return r
+        return self._req("GET", url, **kw)
 
     def _post(self, url, data):
-        r = self.s.post(url, data=data, timeout=45)
-        r.encoding = "ISO-8859-15"
-        time.sleep(self.pausa)
-        return r
+        return self._req("POST", url, data=data)
 
     # ---- Busqueda ---------------------------------------------------------
     def buscar(self, subtipo="", provincia="", origen="", estado="",
@@ -128,9 +139,42 @@ class BoeClient:
         m = re.search(r"id_busqueda=([^&\"'\s]+?)-\d+-\d+", html)
         return m.group(1) if m else None
 
+    # ---- Pujas (ver=5, publico) ------------------------------------------
+    def pujas(self, id_sub):
+        """Lee la pestana de pujas (ver=5). Publicamente el portal muestra si la
+        subasta ha recibido pujas y, en su caso, la puja maxima. Devuelve
+        {num_pujas, puja_maxima}: num_pujas=0 si no hay, None si no se pudo leer."""
+        try:
+            r = self._get(f"{DETALLE}?idSub={id_sub}&ver=5")
+        except Exception:
+            return {"num_pujas": None, "puja_maxima": None}
+        s = BeautifulSoup(r.text, "html.parser")
+        txt = s.get_text(" ", strip=True)
+        if "no ha recibido pujas" in txt.lower():
+            return {"num_pujas": 0, "puja_maxima": None}
+        campos = {}
+        for tr in s.find_all("tr"):
+            th, td = tr.find("th"), tr.find("td")
+            if th and td:
+                campos[th.get_text(" ", strip=True).lower()] = td.get_text(" ", strip=True)
+        n = None
+        for k, v in campos.items():
+            if "pujas" in k or "n\xfamero de pujas" in k or "numero de pujas" in k:
+                m = re.search(r"\d+", v)
+                if m:
+                    n = int(m.group())
+        pmax = None
+        for k, v in campos.items():
+            if "puja" in k and ("m\xe1xima" in k or "maxima" in k or "mejor" in k):
+                pmax = _euros(v)
+        # respaldo: si el texto menciona una puja pero no supimos el numero
+        if n is None and pmax is not None:
+            n = 1
+        return {"num_pujas": n, "puja_maxima": pmax}
+
     # ---- Detalle ----------------------------------------------------------
     def detalle(self, id_sub):
-        """Combina ver=1 (general) y ver=3 (bienes) en un dict normalizado."""
+        """Combina ver=1 (general), ver=3 (bienes) y ver=5 (pujas)."""
         campos = {}
         for ver in (1, 3):
             r = self._get(f"{DETALLE}?idSub={id_sub}&ver={ver}")
@@ -140,7 +184,10 @@ class BoeClient:
                 if th and td:
                     campos[th.get_text(" ", strip=True)] = td.get_text(" ", strip=True)
         g = lambda k: campos.get(k)
+        p = self.pujas(id_sub)
         return {
+            "num_pujas": p["num_pujas"],
+            "puja_maxima": p["puja_maxima"],
             "id_sub": id_sub,
             "url": f"{DETALLE}?idSub={id_sub}",
             "tipo_subasta": g("Tipo de subasta"),

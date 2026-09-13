@@ -24,5 +24,35 @@ COSTERAS = [
     "48", "51", "52",
 ]
 
+# Comunidad Autonoma de cada provincia (por codigo INE).
+CCAA_PROVINCIAS = {
+    "Andalucia": ["04", "11", "14", "18", "21", "23", "29", "41"],
+    "Aragon": ["22", "44", "50"],
+    "Asturias": ["33"],
+    "Illes Balears": ["07"],
+    "Canarias": ["35", "38"],
+    "Cantabria": ["39"],
+    "Castilla y Leon": ["05", "09", "24", "34", "37", "40", "42", "47", "49"],
+    "Castilla-La Mancha": ["02", "13", "16", "19", "45"],
+    "Cataluna": ["08", "17", "25", "43"],
+    "Comunitat Valenciana": ["03", "12", "46"],
+    "Extremadura": ["06", "10"],
+    "Galicia": ["15", "27", "32", "36"],
+    "Madrid": ["28"],
+    "Murcia": ["30"],
+    "Navarra": ["31"],
+    "Pais Vasco": ["01", "20", "48"],
+    "La Rioja": ["26"],
+    "Ceuta": ["51"],
+    "Melilla": ["52"],
+}
+# Indice inverso: codigo de provincia -> nombre de CCAA.
+CCAA_DE = {cod: ccaa for ccaa, cods in CCAA_PROVINCIAS.items() for cod in cods}
+
+
 def nombre(cod):
     return PROVINCIAS.get(cod, cod)
+
+
+def ccaa(cod):
+    return CCAA_DE.get(cod)

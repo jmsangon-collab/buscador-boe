@@ -5,9 +5,9 @@ from provincias import COSTERAS, PROVINCIAS
 # Subtipos de inmueble a rastrear (clave de boe.SUBTIPOS).
 SUBTIPOS = ["vivienda", "solar", "finca_rustica"]
 
-# Provincias a rastrear. Por defecto solo las costeras (te interesa el mar).
-# Pon list(PROVINCIAS) para rastrear toda Espana.
-PROVINCIAS_OBJETIVO = COSTERAS
+# Provincias a rastrear. Toda Espana (las 52). Para acotar, pon COSTERAS
+# (solo las de mar) o una lista de codigos INE, ej: ["04", "29"].
+PROVINCIAS_OBJETIVO = list(PROVINCIAS)
 
 # Estados de subasta a incluir. "PU" (proxima apertura) y "EJ" (celebrandose)
 # son las que aun puedes pujar.

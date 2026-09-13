@@ -1,0 +1,48 @@
+# Actualizacion diaria automatica: rastrea el BOE, geocodifica, regenera el
+# visor, guarda subastas.db + web_publicar/index.html en el repo y despliega
+# GitHub Pages. Tambien se puede lanzar a mano (workflow_dispatch).
+name: update
+on:
+  schedule:
+    - cron: "15 3 * * *"   # 03:15 UTC cada dia
+  workflow_dispatch:
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: false
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Rastrear BOE
+        run: python -u run.py crawl
+      - name: Geocodificar + distancia a la costa
+        run: python -u run.py enrich
+      - name: Generar visor
+        run: python run.py viewer --no-abrir
+      - name: Guardar datos en el repo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/subastas.db web_publicar/index.html
+          git diff --cached --quiet || git commit -m "datos: actualizacion automatica $(date -u +%F)"
+          git push
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web_publicar
+      - id: deployment
+        uses: actions/deploy-pages@v4

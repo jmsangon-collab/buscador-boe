@@ -1,5 +1,5 @@
 # Datos generados (se regeneran con los comandos)
-data/*.db
+# data/subastas.db SI se versiona (lo actualiza GitHub Actions)
 data/*.xlsx
 data/*.csv
 !data/precios_ref.csv
@@ -11,3 +11,6 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+conversation_bookmark.md
+data/crawl.log
+data/crawl.err

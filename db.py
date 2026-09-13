@@ -31,6 +31,9 @@ CREATE TABLE IF NOT EXISTS subastas (
     fecha_fin         TEXT,
     lotes             TEXT,
     url               TEXT,
+    -- estado de pujas (pestana ver=5, publico)
+    num_pujas         INTEGER,
+    puja_maxima       REAL,
     -- enriquecimiento geografico
     lat               REAL,
     lon               REAL,
@@ -48,7 +51,8 @@ def conectar():
     # migracion: añadir columnas nuevas a BD existentes
     existentes = {r[1] for r in con.execute("PRAGMA table_info(subastas)")}
     for col, tipo in [("superficie_m2", "REAL"), ("barrio", "TEXT"),
-                      ("distrito", "TEXT"), ("municipio_geo", "TEXT")]:
+                      ("distrito", "TEXT"), ("municipio_geo", "TEXT"),
+                      ("num_pujas", "INTEGER"), ("puja_maxima", "REAL")]:
         if col not in existentes:
             con.execute(f"ALTER TABLE subastas ADD COLUMN {col} {tipo}")
     return con
