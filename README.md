@@ -42,7 +42,8 @@ python run.py export --precio-max 40000 --cerca-mar --subtipos finca_rustica
 
 Edita `config.py`:
 - `SUBTIPOS`: vivienda / solar / finca_rustica / local / garaje / nave ...
-- `PROVINCIAS_OBJETIVO`: por defecto solo las costeras (`provincias.COSTERAS`).
+- `PROVINCIAS_OBJETIVO`: por defecto Andalucía (`CCAA_PROVINCIAS["Andalucia"]`);
+  también `COSTERAS` o `list(PROVINCIAS)` (toda España).
 - `ESTADOS`: `""` (próxima apertura) y `"PU"` (celebrándose) = aún puedes pujar.
 - `PRECIO_MAX`, `DIST_COSTA_MAX_M`.
 
@@ -80,7 +81,10 @@ El visor está publicado en <https://jmsangon-collab.github.io/buscador-boe/>.
 - **Geocodificación**: usa Nominatim (OpenStreetMap), limitado a 1 consulta/s.
   Las direcciones vagas ("paraje tal", "polígono X parcela Y") pueden no
   geolocalizarse; quedan marcadas como `no_encontrado`.
-- **Cortesía**: el rastreador pausa entre peticiones. No abuses del portal.
+- **Cortesía y captcha**: el rastreador pausa 2 s entre peticiones. Si el
+  portal detecta demasiado volumen sirve una "verificación de seguridad"
+  (captcha); el rastreo se interrumpe sin purgar la BD. Espera un rato y
+  reanuda con `python run.py crawl --desde <cod_provincia>`.
 - Datos oficiales, pero verifica siempre la ficha del BOE antes de pujar
   (cargas, situación posesoria, tramos, depósito, fechas).
 
