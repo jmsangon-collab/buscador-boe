@@ -61,7 +61,7 @@ comparar lotes entre sí. Se muestra como columna en el visor y en el export.
 
 ## Web publicada (GitHub Pages)
 
-El visor está publicado en <https://jmsangon-collab.github.io/buscador-boe/>.
+El visor está publicado en <https://jmsangon-collab.github.io/subastas-boe/>.
 
 - `.github/workflows/update.yml` se ejecuta cada día a las 03:15 UTC: rastrea
   el BOE, geocodifica, regenera el visor, guarda `data/subastas.db` y
